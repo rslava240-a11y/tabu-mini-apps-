@@ -1001,6 +1001,16 @@
     const PHOTO_STORE_NAME = "photos";
     const VIDEO_DB_NAME = "tabu_media_db_v1";
     const VIDEO_STORE_NAME = "videos";
+    const USER_ADDED_PHOTO_PREFIX = "userph_";
+
+    function isUserAddedPhotoId(photoId, modelId = "", fieldName = "") {
+      const idStr = String(photoId || "").trim();
+      if (!idStr) return false;
+      if (modelId && fieldName) {
+        return idStr.startsWith(`${modelId}__${fieldName}__${USER_ADDED_PHOTO_PREFIX}`);
+      }
+      return idStr.includes(`__${USER_ADDED_PHOTO_PREFIX}`);
+    }
 
     function createMediaScopeKey(modelId, fieldName, indexOrId = "") {
       const safeModel = String(modelId || "model").trim();
@@ -1598,29 +1608,40 @@
         if (!m || !m.id) continue;
         for (const field of ["photos", "routePhotos"]) {
           const arr = Array.isArray(m[field]) ? m[field] : [];
+          const strictArr = [];
           for (let i = 0; i < arr.length; i += 1) {
             const norm = normalizePhotoEntry(arr[i], i, m.id, field);
-            if (!norm) continue;
+            if (!norm) {
+              changed = true;
+              continue;
+            }
+            if (!isUserAddedPhotoId(norm.photoId, m.id, field)) {
+              changed = true;
+              continue;
+            }
             if (norm.src && norm.src.startsWith("data:image/") && norm.photoId) {
               photoUrlCache.set(norm.photoId, norm.src);
               await savePhotoDataToDb(norm.photoId, norm.src, norm.name);
-            } else if (norm.photoId && !norm.src) {
+              strictArr.push({ photoId: norm.photoId, src: norm.src, name: norm.name });
+            } else if (norm.photoId) {
               const rec = await getPhotoRecordFromDb(norm.photoId);
-              if (rec && rec.dataUrl) {
+              if (rec && rec.dataUrl && rec.dataUrl.startsWith("data:image/")) {
                 photoUrlCache.set(norm.photoId, rec.dataUrl);
-                if (typeof arr[i] === "object" && arr[i] !== null) {
-                  arr[i].photoId = norm.photoId;
-                  arr[i].src = rec.dataUrl;
-                } else {
-                  arr[i] = { photoId: norm.photoId, src: rec.dataUrl, name: norm.name };
-                }
+                strictArr.push({ photoId: norm.photoId, src: rec.dataUrl, name: norm.name });
+                changed = true;
+              } else {
+                // Не подставляем пустые/незагруженные заглушки
                 changed = true;
               }
             }
           }
+          m[field] = strictArr;
         }
       }
       if (changed) {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: true })));
+        } catch (e) {}
         renderMain();
       }
     }
@@ -1777,12 +1798,33 @@
           const city = normalizeModelCity(m.city, allowedCities);
           if (!city) return null;
           const modelId = String(m.id || `m_sanitized_${mIdx}`).trim();
-          const cleanPhotos = (Array.isArray(m.photos) ? m.photos : [])
-            .map((p, idx) => normalizePhotoEntry(p, idx, modelId, "photos"))
-            .filter(Boolean);
-          const cleanRoutePhotos = (Array.isArray(m.routePhotos) ? m.routePhotos : [])
-            .map((p, idx) => normalizePhotoEntry(p, idx, modelId, "routePhotos"))
-            .filter(Boolean);
+
+          const dedupPhotos = (rawArr, fieldName) => {
+            const seenIds = new Set();
+            const seenSrcPrefix = new Set();
+            const result = [];
+            (Array.isArray(rawArr) ? rawArr : []).forEach((p, idx) => {
+              const norm = normalizePhotoEntry(p, idx, modelId, fieldName);
+              if (!norm) return;
+              if (!isUserAddedPhotoId(norm.photoId, modelId, fieldName)) return;
+              const srcVal = getPhotoDisplaySrc(norm);
+              if (!srcVal || !srcVal.startsWith("data:image/")) return;
+              if (seenIds.has(norm.photoId)) return;
+              const sig = `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
+              if (seenSrcPrefix.has(sig)) return;
+              seenIds.add(norm.photoId);
+              seenSrcPrefix.add(sig);
+              result.push({
+                photoId: norm.photoId,
+                src: srcVal,
+                name: norm.name || `photo_${result.length + 1}.jpg`
+              });
+            });
+            return result;
+          };
+
+          const cleanPhotos = dedupPhotos(m.photos, "photos");
+          const cleanRoutePhotos = dedupPhotos(m.routePhotos, "routePhotos");
           const cleanVideos = (Array.isArray(m.videos) ? m.videos : [])
             .map((v, idx) => normalizeMediaItem(v, `video_${idx + 1}.mp4`, modelId, "videos"))
             .filter(Boolean);
@@ -1842,8 +1884,8 @@
             return;
           }
           const finalizePhoto = async (finalDataUrl) => {
-            if (!finalDataUrl) return null;
-            const uniqueToken = `ph_${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
+            if (!finalDataUrl || !finalDataUrl.startsWith("data:image/")) return null;
+            const uniqueToken = `${USER_ADDED_PHOTO_PREFIX}${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
             const photoId = createMediaScopeKey(modelId, fieldName, uniqueToken);
             photoUrlCache.set(photoId, finalDataUrl);
             await savePhotoDataToDb(photoId, finalDataUrl, file.name || `photo_${fileIdx + 1}.jpg`);
@@ -2107,7 +2149,7 @@
     function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix, modelId = "", fieldName = "photos" }) {
       const list = (Array.isArray(photos) ? photos : [])
         .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
-        .filter(Boolean);
+        .filter((p) => p && isUserAddedPhotoId(p.photoId, modelId, fieldName) && Boolean(getPhotoDisplaySrc(p)));
 
       return `
         <div class="detail-block">
@@ -2124,7 +2166,7 @@
                 const imgSrc = getPhotoDisplaySrc(pItem);
                 return `
                   <div class="photo-tile">
-                    <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.style.display='none'" />
+                    <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.closest('.photo-tile').remove()" />
                     <div class="photo-tile-overlay">
                       <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}" data-prefix="${escapeHtml(downloadPrefix)}">⬇ Скачать</button>
                       <button type="button" class="photo-action-btn del rm-photo-btn" data-idx="${idx}">✕</button>
@@ -2157,7 +2199,7 @@
 
       const normalized = (Array.isArray(photos) ? photos : [])
         .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
-        .filter(Boolean);
+        .filter((p) => p && isUserAddedPhotoId(p.photoId, modelId, fieldName) && Boolean(getPhotoDisplaySrc(p)));
 
       rootEl.querySelectorAll(".dl-photo-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -2737,15 +2779,17 @@
     function serializePhotoForStorage(p, idx = 0, includeImageData = true, modelId = "", fieldName = "photos") {
       const norm = normalizePhotoEntry(p, idx, modelId, fieldName);
       if (!norm) return null;
+      if (!isUserAddedPhotoId(norm.photoId, modelId, fieldName)) return null;
       const srcVal = getPhotoDisplaySrc(norm);
+      if (!srcVal || !srcVal.startsWith("data:image/")) return null;
       if (norm.photoId && srcVal.startsWith("data:image/")) {
         photoUrlCache.set(norm.photoId, srcVal);
         void savePhotoDataToDb(norm.photoId, srcVal, norm.name);
       }
       return {
-        photoId: norm.photoId || (modelId ? createMediaScopeKey(modelId, fieldName, `legacy_${idx}`) : `ph_legacy_${idx}`),
+        photoId: norm.photoId,
         name: norm.name || `photo_${idx + 1}.jpg`,
-        src: includeImageData && srcVal && srcVal.length < 180000 ? srcVal : ""
+        src: includeImageData && srcVal.length < 180000 ? srcVal : ""
       };
     }
 
@@ -2840,19 +2884,37 @@
     function mergePhotosPreservingLocal(remoteList, localList, modelId = "", fieldName = "photos") {
       const remArr = (Array.isArray(remoteList) ? remoteList : [])
         .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
-        .filter(Boolean)
-        .filter((p) => !modelId || !p.photoId || belongsToModelScope(p.photoId, modelId, fieldName));
+        .filter((p) => p && isUserAddedPhotoId(p.photoId, modelId, fieldName));
       const locArr = (Array.isArray(localList) ? localList : [])
         .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
-        .filter(Boolean)
-        .filter((p) => !modelId || !p.photoId || belongsToModelScope(p.photoId, modelId, fieldName));
+        .filter((p) => p && isUserAddedPhotoId(p.photoId, modelId, fieldName));
 
       const localById = new Map();
       locArr.forEach((lp) => {
         if (lp.photoId) localById.set(lp.photoId, lp);
       });
 
-      const merged = remArr.map((rp) => {
+      const seenIds = new Set();
+      const seenSigs = new Set();
+      const merged = [];
+
+      const pushUniquePhoto = (photoObj) => {
+        if (!photoObj || !photoObj.photoId) return;
+        if (seenIds.has(photoObj.photoId)) return;
+        const srcVal = getPhotoDisplaySrc(photoObj);
+        if (!srcVal || !srcVal.startsWith("data:image/")) return;
+        const sig = `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
+        if (seenSigs.has(sig)) return;
+        seenIds.add(photoObj.photoId);
+        seenSigs.add(sig);
+        merged.push({
+          photoId: photoObj.photoId,
+          src: srcVal,
+          name: photoObj.name || "photo.jpg"
+        });
+      };
+
+      remArr.forEach((rp) => {
         const cachedSrc = rp.photoId ? photoUrlCache.get(rp.photoId) : "";
         const localMatch = rp.photoId ? localById.get(rp.photoId) : null;
         const bestSrc = rp.src || cachedSrc || (localMatch ? localMatch.src : "");
@@ -2860,18 +2922,15 @@
           photoUrlCache.set(rp.photoId, bestSrc);
           void savePhotoDataToDb(rp.photoId, bestSrc, rp.name);
         }
-        return {
-          photoId: rp.photoId || (localMatch ? localMatch.photoId : ""),
+        pushUniquePhoto({
+          photoId: rp.photoId,
           src: bestSrc,
           name: rp.name || (localMatch ? localMatch.name : "photo.jpg")
-        };
+        });
       });
 
-      const mergedIds = new Set(merged.map((m) => m.photoId).filter(Boolean));
       locArr.forEach((lp) => {
-        if (!lp.photoId || !mergedIds.has(lp.photoId)) {
-          merged.push(lp);
-        }
+        pushUniquePhoto(lp);
       });
 
       return merged;
@@ -3680,7 +3739,7 @@
           const rescopedPhotos = await Promise.all(pendingPhotos.map(async (p, idx) => {
             const oldId = p.photoId || "";
             const srcVal = getPhotoDisplaySrc(p);
-            const newId = createMediaScopeKey(nextModelId, "photos", `ph_${Date.now()}_${idx}`);
+            const newId = createMediaScopeKey(nextModelId, "photos", `${USER_ADDED_PHOTO_PREFIX}${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`);
             if (srcVal) {
               photoUrlCache.set(newId, srcVal);
               await savePhotoDataToDb(newId, srcVal, p.name || `photo_${idx + 1}.jpg`);
@@ -3694,7 +3753,7 @@
           const rescopedRoutePhotos = await Promise.all(pendingRoutePhotos.map(async (p, idx) => {
             const oldId = p.photoId || "";
             const srcVal = getPhotoDisplaySrc(p);
-            const newId = createMediaScopeKey(nextModelId, "routePhotos", `rph_${Date.now()}_${idx}`);
+            const newId = createMediaScopeKey(nextModelId, "routePhotos", `${USER_ADDED_PHOTO_PREFIX}${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`);
             if (srcVal) {
               photoUrlCache.set(newId, srcVal);
               await savePhotoDataToDb(newId, srcVal, p.name || `route_${idx + 1}.jpg`);
