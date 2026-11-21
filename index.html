@@ -1,0 +1,4149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tabu — Операционная панель</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter+Tight:wght@400;500;600;700&family=Ponomar&family=Triodion&display=swap" rel="stylesheet" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #e8e8e8;
+      --surface: #f6f6f6;
+      --surface-elevated: #ffffff;
+      --text: #141414;
+      --text-secondary: #5c5c5c;
+      --text-muted: #8a8a8a;
+      --accent: #1b1b1b;
+      --accent-soft: #ebebeb;
+      --border: #dcdcdc;
+      --danger: #d9383a;
+      --danger-soft: #fdecec;
+      --success: #1f8b4c;
+      --success-soft: #e7f6ed;
+      --font-calligraphy: 'Triodion', 'Ponomar', 'Cormorant Garamond', Georgia, serif;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+      --transition: 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* App Container */
+    .app-shell {
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    }
+
+    /* Header */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(232, 232, 232, 0.86);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 14px 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.93);
+      background: var(--accent-soft);
+    }
+
+    /* Main Content Area */
+    .main-view {
+      flex: 1;
+      padding: 12px 16px 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .section-count {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--surface);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    /* Search & Filter Bar */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px 38px 11px 38px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--transition), background-color var(--transition);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      background: var(--surface-elevated);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .clear-search {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent-soft);
+      color: var(--text-secondary);
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .clear-search.visible {
+      display: inline-flex;
+    }
+
+    /* Filter Chips */
+    .chips-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      scrollbar-width: none;
+    }
+
+    .chips-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      flex-shrink: 0;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-family: var(--font-calligraphy);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      background: var(--surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    /* Cards */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeSlideIn 0.26s ease;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.16s ease, background-color 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card.clickable {
+      cursor: pointer;
+    }
+
+    .card.clickable:active {
+      transform: scale(0.985);
+      background: var(--surface-elevated);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .card-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      line-height: 1.42;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--text);
+    }
+
+    .pill.danger {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .pill.success {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    /* Action Buttons inside Cards */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .mini-btn {
+      padding: 6px 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text);
+      font-family: var(--font-calligraphy);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.14s ease, background-color 0.2s ease;
+    }
+
+    .mini-btn:active {
+      transform: scale(0.94);
+    }
+
+    .mini-btn.danger {
+      color: var(--danger);
+      border-color: rgba(217, 56, 58, 0.25);
+      background: var(--danger-soft);
+    }
+
+    .mini-btn.status-on {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: rgba(31, 139, 76, 0.25);
+    }
+
+    .mini-btn.status-off {
+      background: var(--accent-soft);
+      color: var(--text-secondary);
+    }
+
+    /* Primary Floating / Section Button */
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 11px 16px;
+      font-family: var(--font-calligraphy);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      line-height: 1.15;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px 16px;
+      font-family: var(--font-calligraphy);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      line-height: 1.15;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Sub-tabs inside Info / Finance */
+    .segmented {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 14px;
+      gap: 4px;
+    }
+
+    .seg-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-calligraphy);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .seg-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Stats Summary Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .stat-val {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 520px;
+      background: rgba(246, 246, 246, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+      z-index: 30;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-calligraphy);
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.025em;
+      line-height: 1.1;
+      padding: 4px 2px;
+      cursor: pointer;
+      transition: color 0.2s ease, transform 0.15s ease;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .nav-item:active {
+      transform: scale(0.92);
+    }
+
+    .nav-icon-wrap {
+      width: 38px;
+      height: 26px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .nav-item.active .nav-icon-wrap {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    /* Bottom Sheet Modal */
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 20, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sheet {
+      width: 100%;
+      max-width: 520px;
+      max-height: 88vh;
+      background: var(--surface);
+      border-top-left-radius: 26px;
+      border-top-right-radius: 26px;
+      padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
+      box-shadow: var(--shadow-md);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow-y: auto;
+    }
+
+    .sheet-backdrop.open .sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle {
+      width: 38px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      margin: 0 auto 14px;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+
+    .sheet-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Form Controls inside Sheet */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent);
+    }
+
+    textarea.form-control {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    /* Model Detail Sheet Blocks */
+    .detail-block {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+      line-height: 1.45;
+      white-space: pre-line;
+    }
+
+    /* Model Photo Strip & Gallery */
+    .model-card-photos {
+      display: flex;
+      gap: 7px;
+      margin-top: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .model-card-photos::-webkit-scrollbar {
+      display: none;
+    }
+
+    .model-thumb {
+      width: 58px;
+      height: 74px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--accent-soft);
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .photo-tile {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      aspect-ratio: 3 / 4;
+    }
+
+    .photo-tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-tile video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #0f0f12;
+    }
+
+    .photo-tile-overlay {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 7px 8px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(12, 12, 15, 0.84) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .photo-action-btn {
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(24, 24, 28, 0.88);
+      color: #ffffff;
+      font-family: var(--font-calligraphy);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .photo-action-btn.del {
+      background: rgba(217, 56, 58, 0.9);
+      border-color: rgba(255, 160, 160, 0.35);
+    }
+
+    .model-card-header-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .model-card-cover {
+      width: 66px;
+      height: 86px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      flex-shrink: 0;
+    }
+
+    .model-quick-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .upload-dropzone {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border);
+      background: var(--surface-elevated);
+      color: var(--text);
+      font-family: var(--font-calligraphy);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .quick-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: var(--accent);
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      z-index: 90;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Edge / Side Payment Note Tab */
+    .side-edge-tab {
+      position: fixed;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 35;
+      background: var(--accent);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-right: none;
+      border-top-left-radius: 14px;
+      border-bottom-left-radius: 14px;
+      padding: 12px 7px;
+      font-family: var(--font-calligraphy);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      transition: transform var(--transition), background-color 0.2s ease, padding var(--transition);
+    }
+
+    .side-edge-tab.otc-edge-tab {
+      top: calc(50% + 96px);
+      background: #282828;
+    }
+
+    .side-edge-tab:active {
+      transform: translateY(-50%) translateX(-2px) scale(0.96);
+    }
+
+    .side-note-drawer {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      background: rgba(20, 20, 20, 0.42);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .side-note-drawer.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .side-note-panel {
+      width: min(92vw, 390px);
+      height: 100%;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .side-note-drawer.open .side-note-panel {
+      transform: translateX(0);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+    }
+
+    .empty-state-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .empty-state-sub {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    /* Ripple effect */
+    .ripple {
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple-ink {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.08);
+      transform: scale(0);
+      animation: rippleAnim 0.5s linear;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim {
+      to {
+        transform: scale(3.5);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"></div>
+
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+      <div class="brand-badge">T</div>
+      <div>
+        <div class="brand-title" id="appTitle">Tabu</div>
+        <div class="brand-sub" id="appSub">Операционная база • Тбилиси / Белград</div>
+        <div class="brand-sub" id="syncStatusText" style="font-size:11px; color:var(--text-muted);">Синхронизация: подключение...</div>
+      </div>
+    </div>
+    </header>
+
+    <!-- Dynamic Main Viewport -->
+    <main class="main-view" id="mainView"></main>
+
+    <!-- Bottom Tab Bar -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="nav-item active" data-tab="bl">
+        <span class="nav-icon-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </span>
+        <span>ЧС</span>
+      </button>
+      <button class="nav-item" data-tab="models">
+        <span class="nav-icon-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <span>Модели</span>
+      </button>
+      <button class="nav-item" data-tab="team">
+        <span class="nav-icon-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <span>Команда</span>
+      </button>
+      <button class="nav-item" data-tab="info">
+        <span class="nav-icon-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </span>
+        <span>Регламент</span>
+      </button>
+      <button class="nav-item" data-tab="ops">
+        <span class="nav-icon-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </span>
+        <span>Касса</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Reusable Bottom Sheet -->
+  <div class="sheet-backdrop" id="sheetBackdrop">
+    <div class="sheet" id="sheetContent"></div>
+  </div>
+
+  <!-- Side Edge Tab & Slide-Out Payment Note -->
+  <button type="button" class="side-edge-tab" id="sidePaymentEdgeBtn" title="Методы оплаты">Оплата</button>
+  <button type="button" class="side-edge-tab otc-edge-tab" id="sideOtcEdgeBtn" title="One time code">One time code</button>
+  <div class="side-note-drawer" id="sidePaymentDrawer" aria-hidden="true">
+    <div class="side-note-panel" id="sidePaymentPanel"></div>
+  </div>
+  <div class="side-note-drawer" id="sideOtcDrawer" aria-hidden="true">
+    <div class="side-note-panel" id="sideOtcPanel"></div>
+  </div>
+
+  <script>
+    window.__app_id = "tabu-group";
+    window.__firebase_config = {
+      apiKey: "AIzaSyC6PSVBREmheLLm1RsY-JcVC_JYKnRgx40",
+      authDomain: "tabu-group-45e05.firebaseapp.com",
+      projectId: "tabu-group-45e05",
+      storageBucket: "tabu-group-45e05.firebasestorage.app",
+      messagingSenderId: "577608338309",
+      appId: "1:577608338309:web:cb7d743383a6b667f992ec",
+      measurementId: "G-ZND2VT390M"
+    };
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof window.__app_id !== "undefined"
+      ? window.__app_id
+      : (typeof __app_id !== "undefined" ? __app_id : "default-app-id");
+    const rawFirebaseConfig = typeof window.__firebase_config !== "undefined"
+      ? window.__firebase_config
+      : (typeof __firebase_config !== "undefined" ? __firebase_config : null);
+    const hasFirebaseConfig = Boolean(rawFirebaseConfig);
+    const initialAuthToken = typeof window.__initial_auth_token !== "undefined"
+      ? window.__initial_auth_token
+      : (typeof __initial_auth_token !== "undefined" ? __initial_auth_token : null);
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let sharedDocRef = null;
+    let isApplyingRemoteSnapshot = false;
+
+    function setSyncStatus(label) {
+      const el = document.getElementById("syncStatusText");
+      if (el) {
+        el.textContent = label;
+      }
+    }
+
+    // Telegram WebApp Integration
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try {
+        tg.setHeaderColor('#e8e8e8');
+        tg.setBackgroundColor('#e8e8e8');
+      } catch (e) {}
+    }
+
+    const APP_NAME = "Tabu";
+    const CUR = "";
+    const STORE_KEY = "miniapp_tabu_v1";
+
+    // Pre-populated database extracted from result_2.json (Group: Tabu)
+    const def = {
+      bl: [
+        { id: "bl_1", phone: "+995 568 93 94 53", reason: "ЧС (из общего списка)" },
+        { id: "bl_2", phone: "+995 579 909 769", reason: "ЧС (из общего списка)" },
+        { id: "bl_3", phone: "+995 593 731 538", reason: "Не оплатил такси" },
+        { id: "bl_4", phone: "+995 593 31 31 93", reason: "ЧС (из общего списка)" },
+        { id: "bl_5", phone: "+995 551 48 51 52", reason: "ЧС (из общего списка)" },
+        { id: "bl_6", phone: "+351 920 184 162", reason: "ЧС (из общего списка)" },
+        { id: "bl_7", phone: "+995 597 17 19 01", reason: "ЧС (из общего списка)" },
+        { id: "bl_8", phone: "+1 (747) 355-7444", reason: "ЧС (из общего списка)" },
+        { id: "bl_9", phone: "+995 599 16 47 65", reason: "ЧС (из общего списка)" },
+        { id: "bl_10", phone: "+995 500 509 695", reason: "ЧС (из общего списка)" },
+        { id: "bl_11", phone: "+995 557 98 64 99", reason: "ЧС (из общего списка)" },
+        { id: "bl_12", phone: "+380 98 429 9305", reason: "ЧС (из общего списка)" },
+        { id: "bl_13", phone: "+995 571 03 79 85", reason: "ЧС (из общего списка)" },
+        { id: "bl_14", phone: "+995 599 88 33 95", reason: "ЧС (грубый / неадекват, общий ЧС)" },
+        { id: "bl_15", phone: "+66 64 986 3909", reason: "ЧС только Мила" },
+        { id: "bl_16", phone: "+995 591 08 64 39", reason: "ЧС (грубый / неадекват, общий ЧС)" },
+        { id: "bl_17", phone: "+995 514 84 99 55", reason: "Сефар (ЧС)" },
+        { id: "bl_18", phone: "+91 70224 71122", reason: "ЧС (индус)" },
+        { id: "bl_19", phone: "+972 55-271-6593", reason: "Выгнал девушку, обвинив в работе на агентство" },
+        { id: "bl_20", phone: "+995 558 21 74 74", reason: "ЧС Полина (к другим норм)" },
+        { id: "bl_21", phone: "+995 555 46 53 47", reason: "Не пускать к Миле (не понимает «нет», конфликтный)" },
+        { id: "bl_22", phone: "+49 176 12652967", reason: "ЧС" },
+        { id: "bl_23", phone: "+995 555 34 48 93", reason: "Фейк $$ (фальшивые деньги)" },
+        { id: "bl_24", phone: "+995 592 34 04 83", reason: "Фейк $$ (фальшивые деньги)" },
+        { id: "bl_25", phone: "+995 557 00 83 72", reason: "Фейк" },
+        { id: "bl_26", phone: "+7 963 808-10-97", reason: "К Крис не отправлять" },
+        { id: "bl_27", phone: "+995 551 08 06 48", reason: "ЧС казашки" },
+        { id: "bl_28", phone: "+995 591 62 26 66", reason: "ЧС" },
+        { id: "bl_29", phone: "+995 555 00 33 05", reason: "ЧС" },
+        { id: "bl_30", phone: "+1 (856) 789-1061", reason: "ЧС (насилие / опасный)" },
+        { id: "bl_31", phone: "+995 577 17 50 24", reason: "ЧС Мила" },
+        { id: "bl_32", phone: "+995 577 21 46 01", reason: "Неадекват" },
+        { id: "bl_33", phone: "+1 (786) 721-1012", reason: "ЧС Мила" },
+        { id: "bl_34", phone: "+995 591 80 28 55", reason: "ЧС Аннабель" },
+        { id: "bl_35", phone: "+995 514 08 83 38", reason: "ЧС" },
+        { id: "bl_36", phone: "+374 77 137407", reason: "ЧС все" },
+        { id: "bl_37", phone: "+995 574 13 74 68", reason: "ЧС (неадекват)" },
+        { id: "bl_38", phone: "+995 592 23 22 00", reason: "ЧС" },
+        { id: "bl_39", phone: "+995 579 45 55 99", reason: "Обманщик / слив" },
+        { id: "bl_40", phone: "+995 597 22 33 71", reason: "Блок: агрессивный, отобрал чай у Жасмин" },
+        { id: "bl_41", phone: "+998 95 009 62 77", reason: "Фейк" },
+        { id: "bl_42", phone: "+995 593 12 65 03", reason: "ЧС (угрожает полицией)" },
+        { id: "bl_43", phone: "+995 574 55 51 76", reason: "Фейк выезды" },
+        { id: "bl_44", phone: "+995 571 00 46 60", reason: "Фейк выезд" },
+        { id: "bl_45", phone: "+995 579 32 02 80", reason: "Фейк выезд" },
+        { id: "bl_46", phone: "+7 991 882-40-42", reason: "Фейк деньги" },
+        { id: "bl_47", phone: "+1 (382) 901-9527", reason: "Фейк крипта" },
+        { id: "bl_48", phone: "+995 579 20 96 11", reason: "Фейк крипта" },
+        { id: "bl_49", phone: "+995 555 39 36 70", reason: "Не пускать к Аннабель (пытается снять презерватив)" },
+        { id: "bl_50", phone: "+995 500 05 71 03", reason: "ЧС Мила" },
+        { id: "bl_51", phone: "+995 599 87 88 92", reason: "ЧС грубый" },
+        { id: "bl_52", phone: "+995 599 72 40 95", reason: "ЧС" },
+        { id: "bl_53", phone: "+995 577 57 23 32", reason: "ЧС неадекват" },
+        { id: "bl_54", phone: "+995 599 04 09 87", reason: "ЧС Николь" },
+        { id: "bl_55", phone: "+995 558 74 90 74", reason: "ЧС все (причиняет боль)" },
+        { id: "bl_56", phone: "+995 555 40 49 55", reason: "ЧС" },
+        { id: "bl_57", phone: "+995 555 15 07 66", reason: "ЧС" },
+        { id: "bl_58", phone: "+995 568 70 39 30", reason: "Вызвал и не встретил" },
+        { id: "bl_59", phone: "+995 577 24 17 45", reason: "Натравил собаку, неадекват" },
+        { id: "bl_60", phone: "+995 557 62 86 20", reason: "Неадекват" },
+        { id: "bl_61", phone: "+995 555 35 54 91", reason: "Фейк оплата" },
+        { id: "bl_62", phone: "+995 500 10 21 32", reason: "Фейк доллары" },
+        { id: "bl_63", phone: "+995 599 10 59 29", reason: "Забирает деньги" },
+        { id: "bl_64", phone: "+372 5863 3096", reason: "ЧС Мила" },
+        { id: "bl_65", phone: "+995 591 16 88 88", reason: "ЧС Жасмин (Саба)" },
+        { id: "bl_66", phone: "+995 595 90 10 20", reason: "Сливной (на Гелике)" },
+        { id: "bl_67", phone: "+995 599 30 18 70", reason: "Фейк бронь на ночь" },
+        { id: "bl_68", phone: "+971 50 856 1606", reason: "Отобрал силой деньги" },
+        { id: "bl_69", phone: "+995 557 67 99 77", reason: "Оскорбления, привел младшего брата" },
+        { id: "bl_70", phone: "+995 599 23 31 58", reason: "К Аннабель не пускать" },
+        { id: "bl_71", phone: "+995 598 55 15 84", reason: "Оскорбления в адрес Аннабель, неадекват" },
+        { id: "bl_72", phone: "+995 558 65 89 77", reason: "Пытался сделать фейк перевод" },
+        { id: "bl_73", phone: "+995 571 35 00 82", reason: "ЧС" },
+        { id: "bl_74", phone: "+995 511 33 33 24", reason: "Не пускать к Аннабель (любит хардкор)" },
+        { id: "bl_75", phone: "+90 501 691 39 77", reason: "Пытается сделать фейк выезды" },
+        { id: "bl_76", phone: "+995 595 95 66 00", reason: "Фейк встречи" },
+        { id: "bl_77", phone: "+995 511 55 67 56", reason: "Применил силу, нарушение границ" },
+        { id: "bl_78", phone: "+995 596 89 87 87", reason: "Торги на месте, оскорбления" },
+        { id: "bl_79", phone: "+34 628 28 44 69", reason: "ЧС (настаивает без презерватива)" },
+        { id: "bl_80", phone: "+995 599 22 47 67", reason: "ЧС (неадекват в сауне)" },
+        { id: "bl_81", phone: "+995 574 90 55 03", reason: "ЧС" },
+        { id: "bl_82", phone: "+995 500 05 61 81", reason: "ЧС Жасмин" },
+        { id: "bl_83", phone: "+995 598 00 00 00", reason: "ЧС" },
+        { id: "bl_84", phone: "+7 968 868-20-33", reason: "Жестокий, ЧС" },
+        { id: "bl_85", phone: "+971 56 325 0201", reason: "Не встретил, обман" },
+        { id: "bl_86", phone: "+995 555 91 41 78", reason: "Выезд за город, не оплатил, выгнал" },
+        { id: "bl_87", phone: "+995 558 55 17 20", reason: "Пустая смотрина" },
+        { id: "bl_88", phone: "+995 577 58 72 88", reason: "ЧС Лика (угрозы)" },
+        { id: "bl_89", phone: "+7 901 275-63-63", reason: "Пытается обмануть" },
+        { id: "bl_90", phone: "+995 555 59 94 51", reason: "Спам / достает звонками" },
+        { id: "bl_91", phone: "+44 7951 683652", reason: "Конфликтный, претензии по фото" },
+        { id: "bl_92", phone: "+995 598 83 33 13", reason: "Фейк выезды (30.09.2026 benzobak)" },
+        { id: "bl_93", phone: "+995 555 73 71 70", reason: "Неадекват (03.10.2026 111)" },
+        { id: "bl_94", phone: "+995 511 28 77 47", reason: "Возможный кент или второй номер чела из ЧС (07.10.2026 111)" },
+        { id: "bl_95", phone: "+995 592 025 311", reason: "Фейк выезд (07.10.2026 Denny)" },
+        { id: "bl_96", phone: "+995 558 19 10 28", reason: "Фейк выезд (07.10.2026 Denny)" },
+        { id: "bl_97", phone: "+995 558 34 44 22", reason: "Агрессивные и опасные (08.10.2026 Максим)" },
+        { id: "bl_98", phone: "+995 557 11 08 80", reason: "Агрессивные и опасные (08.10.2026 Максим)" },
+        { id: "bl_99", phone: "+995 511 28 28 06", reason: "Неадекват (10.10.2026 Denny)" },
+        { id: "bl_100", phone: "+7 906 440-25-55", reason: "Неадекват (10.10.2026 Максим)" },
+        { id: "bl_101", phone: "+7 962 422-05-55", reason: "Неадекват (10.10.2026 Максим)" },
+        { id: "bl_102", phone: "+995 599 66 66 65", reason: "Пытается обмануть каждый раз, не приезжает (11.10.2026 benzobak)" },
+        { id: "bl_103", phone: "+7 912 852-05-95", reason: "Неадекват (15.10.2026 Denny)" },
+        { id: "bl_104", phone: "+995 598 15 03 03", reason: "Фальшивые евро (15.10.2026 Eva)" },
+        { id: "bl_105", phone: "+995 599 58 31 41", reason: "Фейк доллары (15.10.2026 111)" },
+        { id: "bl_106", phone: "+7 963 808-45-80", reason: "Неадекват (15.10.2026 Eva)" },
+        { id: "bl_107", phone: "+995 599 04 15 73", reason: "Мент (15.10.2026 Denny)" },
+        { id: "bl_108", phone: "+995 571 68 00 00", reason: "Резко хочет приехать, опасный (20.10.2026 111)" },
+        { id: "bl_109", phone: "+995 597 14 52 50", reason: "Неадекват (21.10.2026 Eva)" },
+        { id: "bl_110", phone: "+994 50 288 40 74", reason: "ЧС Фокси СТРОГО (штраф / увольнение без ЗП если придет) (21.10.2026 111 / Lana Fox)" },
+        { id: "bl_111", phone: "+995 595 23 31 69", reason: "ЧС Анабель, грубо (22.10.2026 Denny)" },
+        { id: "bl_112", phone: "+995 595 74 70 20", reason: "Опасные, воры, фейк деньги (23.10.2026 111)" },
+        { id: "bl_113", phone: "+995 598 09 86 60", reason: "Опасные, воры, фейк деньги (23.10.2026 111)" },
+        { id: "bl_114", phone: "+49 1521 2210159", reason: "Неадекват, без защиты (23.10.2026 Eva)" },
+        { id: "bl_115", phone: "+995 557 36 13 19", reason: "Фейк выезд (23.10.2026 Denny)" },
+        { id: "bl_116", phone: "+995 591 11 88 63", reason: "Агрессивный, неадекват (24.10.2026 Максим)" },
+        { id: "bl_117", phone: "+995 557 51 31 46", reason: "Мент, забрал деньги (25.10.2026 Максим)" },
+        { id: "bl_118", phone: "+381 61 1341778", reason: "Фейк большая бронь, фейк крипта 99% (27.10.2026 111)" },
+        { id: "bl_119", phone: "+995 555 91 69 23", reason: "Фейк доллары (28.10.2026 111)" },
+        { id: "bl_120", phone: "+995 574 20 78 47", reason: "Фейк деньги и фейк выезд, агрессивные (28.10.2026 Eva)" }
+      ],
+      models: [
+        {
+          id: "m_1",
+          name: "Мила (Mila)",
+          city: "Тбилиси",
+          meta: "18 лет · 156/47",
+          age: "18 лет",
+          params: "156/47",
+          district: "Ортачала / Салоса",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL",
+          address: "57 Beri Gabriel Salosi Ave, 3 эт, кв 22\nЯндекс: Е. Вирсаладзе 1 | Bolt: 8 Lertsami st",
+          entryCode: "",
+          mapLink: "",
+          services: "Классика, минет в резинке",
+          extras: "Окончание на тело 50$, поцелуи 50-200$, фут-фетиш 100$, пара 300$, доминация 200$",
+          phones: "544 113 771 (Denny)",
+          notes: "",
+          photos: [],
+          active: true
+        },
+        {
+          id: "m_2",
+          name: "Kim / Ким",
+          city: "Белград",
+          meta: "22 года · 170/56",
+          incall: "30м 150€ (17600 RSD) / 1ч 200€ (23500 RSD)",
+          outcall: "1ч 250€ (30500 RSD)",
+          address: "Цара Уроша 42, Белград (домофон DOCA, 1 эт, кв 1)",
+          services: "Классика, минет в резинке",
+          extras: "МБР 30€, тело 50€, поцелуи 50€, куни 50€, 69 100€, фут-фетиш 100€",
+          phones: "Евросайты",
+          active: true
+        },
+        {
+          id: "m_3",
+          name: "Tiffany",
+          city: "Белград",
+          meta: "19 лет · 166/49",
+          incall: "30м 150€ / 1ч 200€",
+          outcall: "1ч 250€",
+          address: "Strahinjića Bana 22, Belgrade (домофон 22, 4 эт, кв 22)",
+          services: "Классика, минет в резинке",
+          extras: "МБР 50€, рот 100€, тело 50€, лицо 100€, поцелуи 50€, стрип 50€, лесби 200€, фут-фетиш 100€, пара/групп 400€, доминация 100€",
+          phones: "Евросайты",
+          active: true
+        },
+        {
+          id: "m_4",
+          name: "Polina / Полина",
+          city: "Тбилиси",
+          meta: "18 лет · 173/58",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL",
+          address: "207 Tsotne Dadiani St (Назаладеви), код 8166#, 10 этаж",
+          services: "Классика, минет в резинке",
+          extras: "69 / куни / глубокий / стрип / МБР / игрушки — 100 GEL; фут-фетиш 200 GEL; лесби 150$; поцелуи / анал 100$; пара 250$; групп 300$",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_5",
+          name: "Lola (Белград)",
+          city: "Белград",
+          meta: "19 лет · 170/56",
+          incall: "30м 150€ / 1ч 200€",
+          outcall: "1ч 250€",
+          address: "Цара Уроша 42, Белград (домофон DOCA, 1 эт, кв 1)",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять при бронировании",
+          phones: "Евросайты",
+          active: true
+        },
+        {
+          id: "m_6",
+          name: "Lola (Тбилиси)",
+          city: "Тбилиси",
+          meta: "19 лет · 165/50",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "162 Beri Gabriel Salosi Ave, 2 эт, кв 5 (код каждый день новый)",
+          services: "Классика, минет в резинке",
+          extras: "Глубокий / рот / лицо / поцелуи / куни / 69 — 50$; тело / стрип — 100 GEL; анал 300$; лесби / пара / групп — 350$",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_7",
+          name: "Sofa (120 Салоса)",
+          city: "Тбилиси",
+          meta: "19 лет · 175/58",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL",
+          address: "пр. Монаха Габриэля Салоса 120, 1 эт, кв 6",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_8",
+          name: "Emily",
+          city: "Тбилиси",
+          meta: "21 год · 166/54 · грудь 2",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3ч 3000 GEL",
+          address: "162 Beri Gabriel Salosi Ave, 2 эт, кв 5",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_9",
+          name: "Kris",
+          city: "Тбилиси",
+          meta: "18 лет · 157/46 · грудь 2",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "пр. Монаха Габриэля Салоса 120, 1 эт, кв 4",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_10",
+          name: "Жасмин",
+          city: "Тбилиси",
+          meta: "23 года · 180/48",
+          incall: "Уточнять по прайсу Тбилиси",
+          outcall: "Уточнять по прайсу Тбилиси",
+          address: "122 Beri Gabriel Salosi Ave, домофон 0037#, 6 эт, код лифта 61209614#",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_11",
+          name: "Celine",
+          city: "Тбилиси",
+          meta: "160/50",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "57 Beri Gabriel Salosi Ave, 2 эт, кв 13\nЯндекс: Е. Вирсаладзе 1 | Bolt: 8 Lertsami st",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "+995 593 14 97 30 (slav)",
+          active: true
+        },
+        {
+          id: "m_12",
+          name: "Аннабель",
+          city: "Тбилиси",
+          meta: "170/50",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3ч 3000 GEL, ночь 3000$",
+          address: "57A Beri Gabriel Salosi Ave, 1 эт, кв 8\nЯндекс: Е. Вирсаладзе 1 | Bolt: 8 Lertsami st",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_13",
+          name: "Николь",
+          city: "Тбилиси",
+          meta: "175/58",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3ч 3000 GEL",
+          address: "57 Beri Gabriel Salosi Ave, 2 эт, кв 13",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_14",
+          name: "Лина",
+          city: "Тбилиси",
+          meta: "21 год · 172/50",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3ч 3000 GEL",
+          address: "Гурам Панджикидзе 22, С блок, 4 эт, кв 9, код 104776#",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_15",
+          name: "Alsu (Алсу)",
+          city: "Тбилиси",
+          meta: "18 лет · 170/49",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "57A Beri Gabriel Salosi Ave, 2 эт, кв 13\n(ранее также Навтлуги 10, Блок А, подъезд 2, эт 13, кв 181, код 559687)",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "+995 574 217 613 (Макс TABU)",
+          active: true
+        },
+        {
+          id: "m_16",
+          name: "Sabina",
+          city: "Тбилиси",
+          meta: "19 лет · 166/49",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "57A Beri Gabriel Salosi Ave, 3 эт, кв 25",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_17",
+          name: "Lika",
+          city: "Тбилиси",
+          meta: "18 лет · 166/50 · грудь 3",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "пр. Монаха Габриэля Салоса 162, 9 этаж с лифта направо",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "+995 544 11 37 98 (Denny)",
+          active: true
+        },
+        {
+          id: "m_18",
+          name: "Софа (162 Салоса)",
+          city: "Тбилиси",
+          meta: "18 лет · 167/55 · грудь 3",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "пр. Монаха Габриэля Салоса 162, 2 эт, кв 5",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_19",
+          name: "Viki",
+          city: "Тбилиси",
+          meta: "22 года · 172/55 · грудь 2",
+          incall: "30м 500 / 1ч 700 GEL",
+          outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
+          address: "Александра Казбеги 15 к 3, 4 эт, кв 136, домофон 136",
+          services: "Классика, минет в резинке",
+          extras: "Уточнять в чате смены",
+          phones: "Рабочий номер в смене",
+          active: true
+        },
+        {
+          id: "m_20",
+          name: "Ариана / Ася / Карина / Милана / Даша",
+          city: "Онлайн",
+          meta: "Вирт-сопровождение",
+          incall: "Онлайн-формат",
+          outcall: "По запросу",
+          address: "Удалённые рабочие номера (вирт)",
+          services: "Вирт-сопровождение",
+          extras: "Уточнять у операторов направления",
+          phones: "+995 544 113 964 (Илья — Ариана-вирт)",
+          active: true
+        }
+      ],
+      team: [
+        { id: "t_1", name: "benzobak", role: "Администратор / Владелец", note: "Управление проектом Tabu" },
+        { id: "t_2", name: "Lana Fox", role: "Администратор / Менеджер", note: "Координация смен, контроль встреч" },
+        { id: "t_3", name: "Eva", role: "Администратор / Анкеты и локации", note: "Обновление анкет, квартир и кодов" },
+        { id: "t_4", name: "Макс TABU (Максим)", role: "Оператор", note: "+995 574 217 613 (Алсу), +995 593 183 789 (евросайты), 995544113973 (запасной)" },
+        { id: "t_5", name: "Denny", role: "Оператор", note: "+995 544 11 37 98 (Лика), 544113771 (Мила)" },
+        { id: "t_6", name: "slav", role: "Оператор", note: "@slavarioo · Селин: +995 593 14 97 30" },
+        { id: "t_7", name: "Илья", role: "Оператор", note: "+995 544 113 964 (Ариана-вирт)" },
+        { id: "t_8", name: "111", role: "Оператор", note: "Линия приёма заявок" },
+        { id: "t_9", name: "Nicko", role: "Оператор", note: "Линия приёма заявок" },
+        { id: "t_10", name: "Anastasia", role: "Сотрудник", note: "Сопровождение процессов" },
+        { id: "t_11", name: "Даша", role: "Менеджер номеров / анкет", note: "Выдача и контроль рабочих номеров" },
+        { id: "t_12", name: "Тамта", role: "Менеджер номеров", note: "Контроль и замена SIM / WhatsApp" },
+        { id: "t_13", name: "Кока", role: "Партнёр / Куратор", note: "Кураторство и решение спорных ситуаций" }
+      ],
+      rules: [
+        { id: "r_1", text: "Приветствие до начала смены (начинаем за полчаса), прощание после конца смены." },
+        { id: "r_2", text: "Обязательно проверять номер клиента во время диалога о встрече." },
+        { id: "r_3", text: "При договорённости с клиентом писать в группу менеджеру: имя модели, по типажному ли фото, время, продолжительность, язык общения, способ оплаты (нал/перевод/крипта), статус проверки номера (чистый или скриншот)." },
+        { id: "r_4", text: "При договорённости о выезде: помимо заказа такси клиентом, обязательно запросить полный адрес + видео." },
+        { id: "r_5", text: "Анти-бан WhatsApp: не отвечать сразу на все висящие чаты при старте смены — начинать с самых свежих (3–5 чатов), использовать разные приветствия без шаблонов и держать КД 10–15 мин перед ответом остальным." },
+        { id: "r_6", text: "При смене рабочего номера не писать первым по старым/необновлённым чатам другого номера, чтобы избежать мгновенной блокировки." }
+      ],
+      fines: [
+        { id: "f_1", title: "Проспал смену", amount: "5–50$" },
+        { id: "f_2", title: "Ответ >15 мин", amount: "5$" },
+        { id: "f_3", title: "Ушёл со смены раньше", amount: "20$" },
+        { id: "f_4", title: "Игнор поручений менеджера / тимлида", amount: "20–100$" },
+        { id: "f_5", title: "Не проверил клиента с плохими отзывами и впустил без разрешения", amount: "50–100$" },
+        { id: "f_6", title: "Клиенты из ЧС", amount: "50$" },
+        { id: "f_7", title: "Грубость клиенту", amount: "20–50$" },
+        { id: "f_8", title: "Слив информации", amount: "100$+" },
+        { id: "f_9", title: "Нет связи во время смены", amount: "10–30$" },
+        { id: "f_10", title: "Игнор рабочих чатов", amount: "10$" },
+        { id: "f_11", title: "Ошибка в записи клиента", amount: "10–30$" },
+        { id: "f_12", title: "Повторное нарушение", amount: "штраф ×2" },
+        { id: "f_13", title: "Несоблюдение регламента смены", amount: "10–50$" }
+      ],
+      modelCities: ["Тбилиси"],
+      paymentMethods: [
+        { id: "pm_trc20", label: "TRC20 crypto", value: "TPfWNDNryCRNm5jBcbUnKs99jzDnMP66NF" },
+        { id: "pm_bog", label: "BOG", value: "GE72BG0000000612318901" },
+        { id: "pm_tbc", label: "TBC", value: "GE19TB7200445163300003" }
+      ],
+      oneTimeCodes: [
+        { id: "otc_1", modelName: "имя модели", code: "475121#" },
+        { id: "otc_2", modelName: "имя модели", code: "884751#" }
+      ],
+      acc: [],
+      shifts: [],
+      closings: [],
+      weeklyReports: []
+    };
+
+    const BASE_MODEL_CITIES = ["Тбилиси"];
+
+    function normalizeCityName(rawCity) {
+      const val = String(rawCity || "").trim();
+      if (!val) return "";
+      if (/^(белград|belgrade|онлайн|online|евросайты|евро\s*сайты)/i.test(val)) return "";
+      if (/^тбилиси$/i.test(val)) return "Тбилиси";
+      return val;
+    }
+
+    function getAllowedModelCities() {
+      const custom = Array.isArray(state.modelCities) ? state.modelCities : [];
+      const merged = [...BASE_MODEL_CITIES];
+      custom.forEach((c) => {
+        const clean = normalizeCityName(c);
+        if (clean && !merged.some((existing) => existing.toLowerCase() === clean.toLowerCase())) {
+          merged.push(clean);
+        }
+      });
+      return merged;
+    }
+
+    function normalizeModelCity(rawCity, allowedCities = BASE_MODEL_CITIES) {
+      const clean = normalizeCityName(rawCity);
+      if (!clean) return null;
+      const matched = allowedCities.find((c) => c.toLowerCase() === clean.toLowerCase());
+      return matched || null;
+    }
+
+    function sanitizeModelsList(list, allowedCities = BASE_MODEL_CITIES) {
+      if (!Array.isArray(list)) return [];
+      return list
+        .map((m) => {
+          if (!m || typeof m !== "object") return null;
+          const city = normalizeModelCity(m.city, allowedCities);
+          if (!city) return null;
+          return {
+            ...m,
+            city,
+            photos: Array.isArray(m.photos) ? m.photos : [],
+            routePhotos: Array.isArray(m.routePhotos) ? m.routePhotos : [],
+            videos: Array.isArray(m.videos) ? m.videos : [],
+            routeVideos: Array.isArray(m.routeVideos) ? m.routeVideos : [],
+            description: typeof m.description === "string" ? m.description : ""
+          };
+        })
+        .filter(Boolean);
+    }
+    function getModelMapUrl(model) {
+      const customLink = String(model?.mapLink || "").trim();
+      if (customLink) return customLink;
+      const addr = String(model?.address || "").split("\n")[0].trim();
+      const city = String(model?.city || "").trim();
+      const query = [addr, city].filter(Boolean).join(", ");
+      if (!query) return "";
+      return `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+    }
+
+    function buildModelClientText(model) {
+      if (!model) return "";
+      const customDesc = String(model.description || "").trim();
+      if (customDesc) return customDesc;
+      const lines = [
+        model.name ? `Модель: ${model.name}` : "",
+        model.city ? `Город: ${model.city}` : "",
+        model.meta ? `Параметры: ${model.meta}` : "",
+        model.district ? `Район: ${model.district}` : "",
+        model.incall ? `Incall: ${model.incall}` : "",
+        model.outcall ? `Outcall: ${model.outcall}` : "",
+        model.services ? `Услуги: ${model.services}` : "",
+        model.extras ? `Допы: ${model.extras}` : ""
+      ].filter(Boolean);
+      return lines.join("\n");
+    }
+
+    function compressImageFiles(fileList, maxSize = 960, quality = 0.78) {
+      const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("image/"));
+      if (!files.length) return Promise.resolve([]);
+
+      const readSingleFile = (file) => new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              let { width, height } = img;
+              if (width > maxSize || height > maxSize) {
+                if (width >= height) {
+                  height = Math.round((height * maxSize) / width);
+                  width = maxSize;
+                } else {
+                  width = Math.round((width * maxSize) / height);
+                  height = maxSize;
+                }
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.max(1, width);
+              canvas.height = Math.max(1, height);
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                resolve(String(ev.target?.result || ""));
+                return;
+              }
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL("image/jpeg", quality));
+            } catch (err) {
+              resolve(String(ev.target?.result || ""));
+            }
+          };
+          img.onerror = () => resolve("");
+          img.src = String(ev.target?.result || "");
+        };
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(file);
+      });
+
+      return Promise.all(files.map(readSingleFile)).then((items) => items.filter(Boolean));
+    }
+
+    function readVideoFiles(fileList) {
+      const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("video/"));
+      if (!files.length) return Promise.resolve([]);
+
+      const readSingleVideo = (file) => new Promise((resolve) => {
+        try {
+          const objectUrl = URL.createObjectURL(file);
+          resolve({
+            src: objectUrl,
+            name: file.name || "video.mp4",
+            size: file.size || 0
+          });
+        } catch (err) {
+          resolve(null);
+        }
+      });
+
+      return Promise.all(files.map(readSingleVideo)).then((items) => items.filter(Boolean));
+    }
+
+    function normalizeMediaItem(item, fallbackName = "media") {
+      if (!item) return null;
+      if (typeof item === "string") {
+        return { src: item, name: fallbackName };
+      }
+      if (typeof item === "object" && item.src) {
+        return { src: item.src, name: item.name || fallbackName };
+      }
+      return null;
+    }
+
+    function triggerPhotoDownload(src, filename = "photo.jpg") {
+      if (!src) {
+        showToast("Нет файла для скачивания");
+        return;
+      }
+      try {
+        const link = document.createElement("a");
+        link.href = src;
+        link.download = filename;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Скачивание запущено");
+      } catch (e) {
+        showToast("Не удалось скачать фото");
+      }
+    }
+
+    function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix, onAddFiles, onRemovePhoto }) {
+      const list = Array.isArray(photos) ? photos : [];
+      return `
+        <div class="detail-block">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+            <div class="detail-label" style="margin:0;">${escapeHtml(title)} (${list.length})</div>
+            <label class="mini-btn" for="${escapeHtml(uploadInputId)}" style="cursor:pointer;">+ Загрузить фото</label>
+            <input id="${escapeHtml(uploadInputId)}" type="file" accept="image/*" multiple style="display:none;" />
+          </div>
+          ${list.length === 0 ? `
+            <div class="card-sub" style="margin:0;">Фотографии ещё не добавлены</div>
+          ` : `
+            <div class="photo-grid">
+              ${list.map((src, idx) => `
+                <div class="photo-tile">
+                  <img src="${escapeHtml(src)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.style.display='none'" />
+                  <div class="photo-tile-overlay">
+                    <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}">⬇ Скачать</button>
+                    <button type="button" class="photo-action-btn del rm-photo-btn" data-idx="${idx}">✕</button>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function attachPhotoGalleryEvents(rootEl, photos, uploadInputId, downloadPrefix, onAddFiles, onRemovePhoto) {
+      const fileInput = rootEl.querySelector(`#${uploadInputId}`);
+      if (fileInput) {
+        fileInput.addEventListener("change", async (e) => {
+          const files = e.target.files;
+          if (!files || !files.length) return;
+          showToast("Обработка фото...");
+          const compressed = await compressImageFiles(files);
+          if (!compressed.length) {
+            showToast("Не удалось загрузить фото");
+            return;
+          }
+          onAddFiles(compressed);
+        });
+      }
+
+      rootEl.querySelectorAll(".dl-photo-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.dataset.idx);
+          const src = photos[idx];
+          triggerPhotoDownload(src, `${downloadPrefix}_${idx + 1}.jpg`);
+        });
+      });
+
+      rootEl.querySelectorAll(".rm-photo-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.dataset.idx);
+          onRemovePhoto(idx);
+        });
+      });
+    }
+
+    function renderVideoGalleryBlock({ title, videos, uploadInputId, downloadPrefix }) {
+      const list = (Array.isArray(videos) ? videos : [])
+        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`))
+        .filter(Boolean);
+
+      return `
+        <div class="detail-block">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+            <div class="detail-label" style="margin:0;">${escapeHtml(title)} (${list.length})</div>
+            <label class="mini-btn" for="${escapeHtml(uploadInputId)}" style="cursor:pointer;">+ Загрузить видео</label>
+            <input id="${escapeHtml(uploadInputId)}" type="file" accept="video/*" multiple style="display:none;" />
+          </div>
+          ${list.length === 0 ? `
+            <div class="card-sub" style="margin:0;">Видео пока не добавлены</div>
+          ` : `
+            <div class="photo-grid">
+              ${list.map((vid, idx) => `
+                <div class="photo-tile">
+                  <video src="${escapeHtml(vid.src)}" controls playsinline preload="metadata"></video>
+                  <div class="photo-tile-overlay">
+                    <button type="button" class="photo-action-btn dl-vid-btn" data-idx="${idx}">⬇ Скачать</button>
+                    <button type="button" class="photo-action-btn del rm-vid-btn" data-idx="${idx}">✕</button>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function attachVideoGalleryEvents(rootEl, videos, uploadInputId, downloadPrefix, onAddVideos, onRemoveVideo) {
+      const fileInput = rootEl.querySelector(`#${uploadInputId}`);
+      if (fileInput) {
+        fileInput.addEventListener("change", async (e) => {
+          const files = e.target.files;
+          if (!files || !files.length) return;
+          showToast("Загрузка видео...");
+          const loaded = await readVideoFiles(files);
+          if (!loaded.length) {
+            showToast("Не удалось загрузить видео");
+            return;
+          }
+          onAddVideos(loaded);
+        });
+      }
+
+      const normalized = (Array.isArray(videos) ? videos : [])
+        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`))
+        .filter(Boolean);
+
+      rootEl.querySelectorAll(".dl-vid-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.dataset.idx);
+          const item = normalized[idx];
+          if (item) {
+            triggerPhotoDownload(item.src, item.name || `${downloadPrefix}_${idx + 1}.mp4`);
+          }
+        });
+      });
+
+      rootEl.querySelectorAll(".rm-vid-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.dataset.idx);
+          onRemoveVideo(idx);
+        });
+      });
+    }
+
+    function openEditModelSheet(modelId) {
+      const model = (state.models || []).find((m) => m.id === modelId);
+      if (!model) return;
+      const cities = getAllowedModelCities();
+
+      openSheet(`
+        <div class="sheet-header">
+          <div class="sheet-title">Редактировать анкету</div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="editModelForm">
+          <div class="form-group">
+            <label class="form-label">Имя модели</label>
+            <input class="form-control" name="name" type="text" value="${escapeHtml(model.name || "")}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Город</label>
+            <select class="form-control" name="city">
+              ${cities.map((c) => `
+                <option value="${escapeHtml(c)}" ${String(model.city || "").toLowerCase() === c.toLowerCase() ? "selected" : ""}>${escapeHtml(c)}</option>
+              `).join("")}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Возраст / параметры</label>
+            <input class="form-control" name="meta" type="text" value="${escapeHtml(model.meta || "")}" placeholder="Например: 20 лет · 168/52" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Район</label>
+            <input class="form-control" name="district" type="text" value="${escapeHtml(model.district || "")}" placeholder="Район города" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Incall</label>
+            <input class="form-control" name="incall" type="text" value="${escapeHtml(model.incall || "")}" placeholder="Прайс апартаментов" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Outcall</label>
+            <input class="form-control" name="outcall" type="text" value="${escapeHtml(model.outcall || "")}" placeholder="Прайс выезда" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Адрес и ориентиры</label>
+            <textarea class="form-control" name="address" placeholder="Улица, дом, этаж, код">${escapeHtml(model.address || "")}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ссылка на карту / адрес</label>
+            <input class="form-control" name="mapLink" type="text" value="${escapeHtml(model.mapLink || "")}" placeholder="https://maps.google.com/..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Описание для клиента</label>
+            <textarea class="form-control" name="description" placeholder="Текст анкеты / описание для клиента (если пусто — соберётся автоматически)">${escapeHtml(model.description || "")}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Услуги</label>
+            <input class="form-control" name="services" type="text" value="${escapeHtml(model.services || "")}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Допы</label>
+            <textarea class="form-control" name="extras">${escapeHtml(model.extras || "")}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Контакты / рабочий номер</label>
+            <input class="form-control" name="phones" type="text" value="${escapeHtml(model.phones || "")}" />
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;">Сохранить изменения</button>
+        </form>
+      `);
+
+      document.getElementById("editModelForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const target = (state.models || []).find((m) => m.id === modelId);
+        if (!target) return;
+        const allowed = getAllowedModelCities();
+        const nextCity = normalizeModelCity(fd.get("city"), allowed) || allowed[0] || "Тбилиси";
+
+        target.name = String(fd.get("name") || "").trim() || target.name;
+        target.city = nextCity;
+        target.meta = String(fd.get("meta") || "").trim();
+        target.district = String(fd.get("district") || "").trim();
+        target.incall = String(fd.get("incall") || "").trim();
+        target.outcall = String(fd.get("outcall") || "").trim();
+        target.address = String(fd.get("address") || "").trim();
+        target.mapLink = String(fd.get("mapLink") || "").trim();
+        target.description = String(fd.get("description") || "").trim();
+        target.services = String(fd.get("services") || "").trim();
+        target.extras = String(fd.get("extras") || "").trim();
+        target.phones = String(fd.get("phones") || "").trim();
+
+        saveState();
+        renderMain();
+        openModelDetailSheet(modelId);
+        showToast("Анкета обновлена");
+      });
+    }
+
+    function openModelDetailSheet(modelId) {
+      const model = (state.models || []).find((m) => m.id === modelId);
+      if (!model) return;
+
+      const photos = Array.isArray(model.photos) ? model.photos : [];
+      const routePhotos = Array.isArray(model.routePhotos) ? model.routePhotos : [];
+      const videos = Array.isArray(model.videos) ? model.videos : [];
+      const routeVideos = Array.isArray(model.routeVideos) ? model.routeVideos : [];
+      const clientText = buildModelClientText(model);
+      const mapUrl = getModelMapUrl(model);
+
+      openSheet(`
+        <div class="sheet-header">
+          <div>
+            <div class="sheet-title">${escapeHtml(model.name || "")}</div>
+            <div class="card-sub" style="margin-top:2px;">${escapeHtml(model.city || "")}${model.meta ? ` · ${escapeHtml(model.meta)}` : ""}</div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="mini-btn" id="editModelDetailBtn">✎ Изменить</button>
+            <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+          </div>
+        </div>
+
+        <div id="modelPhotosGalleryWrap">
+          ${renderPhotoGalleryBlock({
+            title: "Фотографии модели",
+            photos,
+            uploadInputId: "modelPhotosUploadInput",
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_photo`,
+            onAddFiles: () => {},
+            onRemovePhoto: () => {}
+          })}
+        </div>
+
+        <div id="modelVideosGalleryWrap">
+          ${renderVideoGalleryBlock({
+            title: "Видео модели",
+            videos,
+            uploadInputId: "modelVideosUploadInput",
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_video`
+          })}
+        </div>
+
+        <div class="quick-actions-grid">
+          <button type="button" class="btn-primary" id="copyClientPitchBtn" style="padding:10px 12px; font-size:15px;">📋 Текст клиенту</button>
+          <button type="button" class="mini-btn" id="editDescInlineBtn" style="justify-content:center; padding:10px 12px; font-size:15px;">✎ Редактировать описание</button>
+        </div>
+
+        <div class="detail-block">
+          <div class="detail-label">Описание для клиента</div>
+          <div class="detail-value">${escapeHtml(clientText || "Описание не заполнено")}</div>
+        </div>
+
+        ${(model.incall || model.outcall) ? `
+          <div class="detail-block">
+            <div class="detail-label">Прайс</div>
+            <div class="detail-value">${escapeHtml([
+              model.incall ? `Incall: ${model.incall}` : "",
+              model.outcall ? `Outcall: ${model.outcall}` : ""
+            ].filter(Boolean).join("\n"))}</div>
+          </div>
+        ` : ""}
+
+        ${(model.services || model.extras) ? `
+          <div class="detail-block">
+            <div class="detail-label">Услуги и допы</div>
+            <div class="detail-value">${escapeHtml([
+              model.services ? `Услуги: ${model.services}` : "",
+              model.extras ? `Допы: ${model.extras}` : ""
+            ].filter(Boolean).join("\n"))}</div>
+          </div>
+        ` : ""}
+
+        ${model.phones ? `
+          <div class="detail-block">
+            <div class="detail-label">Контакты / рабочий номер</div>
+            <div class="detail-value">${escapeHtml(model.phones)}</div>
+          </div>
+        ` : ""}
+
+        <div class="detail-block">
+          <div class="detail-label">Адрес и локация</div>
+          <div class="detail-value">${escapeHtml(model.address || "Адрес не указан")}</div>
+          ${model.district ? `<div class="card-sub" style="margin-top:6px;">Район: ${escapeHtml(model.district)}</div>` : ""}
+          ${mapUrl ? `<div class="card-sub" style="margin-top:4px; word-break:break-all;">Ссылка на адрес: ${escapeHtml(mapUrl)}</div>` : ""}
+        </div>
+
+        <div class="quick-actions-grid">
+          <button type="button" class="btn-secondary" id="copyModelAddrBtn" style="padding:10px 12px; font-size:15px;">📍 Копировать адрес</button>
+          <button type="button" class="btn-secondary" id="copyMapLinkBtn" style="padding:10px 12px; font-size:15px;">🔗 Ссылка на адрес</button>
+        </div>
+
+        <div class="form-group">
+          <button type="button" class="btn-secondary" id="openMapLinkBtn" style="width:100%; padding:10px 12px; font-size:15px;">🗺 Открыть карту</button>
+        </div>
+
+        <div id="modelRoutePhotosGalleryWrap">
+          ${renderPhotoGalleryBlock({
+            title: "Фото проходки до дома модели",
+            photos: routePhotos,
+            uploadInputId: "modelRoutePhotosUploadInput",
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route`,
+            onAddFiles: () => {},
+            onRemovePhoto: () => {}
+          })}
+        </div>
+
+        <div id="modelRouteVideosGalleryWrap">
+          ${renderVideoGalleryBlock({
+            title: "Видео проходки до дома модели",
+            videos: routeVideos,
+            uploadInputId: "modelRouteVideosUploadInput",
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route_video`
+          })}
+        </div>
+      `);
+
+      const sheetEl = document.getElementById("sheetContent");
+
+      document.getElementById("editModelDetailBtn").addEventListener("click", () => {
+        openEditModelSheet(modelId);
+      });
+
+      document.getElementById("editDescInlineBtn").addEventListener("click", () => {
+        openEditModelSheet(modelId);
+      });
+
+      document.getElementById("copyClientPitchBtn").addEventListener("click", () => {
+        copyText(clientText);
+      });
+
+      document.getElementById("copyModelAddrBtn").addEventListener("click", () => {
+        copyText(model.address || "");
+      });
+
+      document.getElementById("copyMapLinkBtn").addEventListener("click", () => {
+        if (!mapUrl) {
+          showToast("Ссылка на адрес отсутствует");
+          return;
+        }
+        copyText(mapUrl);
+      });
+
+      document.getElementById("openMapLinkBtn").addEventListener("click", () => {
+        if (!mapUrl) {
+          showToast("Ссылка на адрес отсутствует");
+          return;
+        }
+        window.open(mapUrl, "_blank", "noopener,noreferrer");
+      });
+
+      attachPhotoGalleryEvents(
+        sheetEl,
+        photos,
+        "modelPhotosUploadInput",
+        `${(model.name || "model").replace(/\s+/g, "_")}_photo`,
+        (added) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target) return;
+          target.photos = [...(Array.isArray(target.photos) ? target.photos : []), ...added];
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast(`Добавлено фото: ${added.length}`);
+        },
+        (idx) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target || !Array.isArray(target.photos)) return;
+          target.photos.splice(idx, 1);
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast("Фото удалено");
+        }
+      );
+
+      attachPhotoGalleryEvents(
+        sheetEl,
+        routePhotos,
+        "modelRoutePhotosUploadInput",
+        `${(model.name || "model").replace(/\s+/g, "_")}_route`,
+        (added) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target) return;
+          target.routePhotos = [...(Array.isArray(target.routePhotos) ? target.routePhotos : []), ...added];
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast(`Добавлено фото проходки: ${added.length}`);
+        },
+        (idx) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target || !Array.isArray(target.routePhotos)) return;
+          target.routePhotos.splice(idx, 1);
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast("Фото проходки удалено");
+        }
+      );
+
+      attachVideoGalleryEvents(
+        sheetEl,
+        videos,
+        "modelVideosUploadInput",
+        `${(model.name || "model").replace(/\s+/g, "_")}_video`,
+        (added) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target) return;
+          target.videos = [...(Array.isArray(target.videos) ? target.videos : []), ...added];
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast(`Добавлено видео: ${added.length}`);
+        },
+        (idx) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target || !Array.isArray(target.videos)) return;
+          target.videos.splice(idx, 1);
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast("Видео удалено");
+        }
+      );
+
+      attachVideoGalleryEvents(
+        sheetEl,
+        routeVideos,
+        "modelRouteVideosUploadInput",
+        `${(model.name || "model").replace(/\s+/g, "_")}_route_video`,
+        (added) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target) return;
+          target.routeVideos = [...(Array.isArray(target.routeVideos) ? target.routeVideos : []), ...added];
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast(`Добавлено видео проходки: ${added.length}`);
+        },
+        (idx) => {
+          const target = (state.models || []).find((m) => m.id === modelId);
+          if (!target || !Array.isArray(target.routeVideos)) return;
+          target.routeVideos.splice(idx, 1);
+          saveState();
+          renderMain();
+          openModelDetailSheet(modelId);
+          showToast("Видео проходки удалено");
+        }
+      );
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) {
+          const initial = JSON.parse(JSON.stringify(def));
+          initial.modelCities = [...BASE_MODEL_CITIES];
+          initial.models = sanitizeModelsList(initial.models, initial.modelCities);
+          initial.closings = [];
+          initial.weeklyReports = [];
+          return initial;
+        }
+        const parsed = JSON.parse(raw);
+        const rawCities = Array.isArray(parsed.modelCities) ? parsed.modelCities : BASE_MODEL_CITIES;
+        const normalizedCities = [...BASE_MODEL_CITIES];
+        rawCities.forEach((c) => {
+          const clean = normalizeCityName(c);
+          if (clean && !normalizedCities.some((ex) => ex.toLowerCase() === clean.toLowerCase())) {
+            normalizedCities.push(clean);
+          }
+        });
+        const sanitizedModels = Array.isArray(parsed.models)
+          ? sanitizeModelsList(parsed.models, normalizedCities)
+          : sanitizeModelsList(def.models, normalizedCities);
+        const normalizedState = {
+          bl: Array.isArray(parsed.bl) ? parsed.bl : def.bl,
+          models: sanitizedModels,
+          modelCities: normalizedCities,
+          team: Array.isArray(parsed.team) ? parsed.team : def.team,
+          rules: Array.isArray(parsed.rules) ? parsed.rules : def.rules,
+          fines: Array.isArray(parsed.fines) ? parsed.fines : def.fines,
+          paymentMethods: Array.isArray(parsed.paymentMethods) && parsed.paymentMethods.length > 0
+            ? parsed.paymentMethods
+            : JSON.parse(JSON.stringify(def.paymentMethods)),
+          oneTimeCodes: Array.isArray(parsed.oneTimeCodes) && parsed.oneTimeCodes.length > 0
+            ? parsed.oneTimeCodes
+            : JSON.parse(JSON.stringify(def.oneTimeCodes)),
+          acc: Array.isArray(parsed.acc) ? parsed.acc : [],
+          shifts: Array.isArray(parsed.shifts) ? parsed.shifts : [],
+          closings: Array.isArray(parsed.closings) ? parsed.closings : [],
+          weeklyReports: Array.isArray(parsed.weeklyReports) ? parsed.weeklyReports : []
+        };
+        localStorage.setItem(STORE_KEY, JSON.stringify(normalizedState));
+        return normalizedState;
+      } catch (e) {
+        const fallback = JSON.parse(JSON.stringify(def));
+        fallback.modelCities = [...BASE_MODEL_CITIES];
+        fallback.models = sanitizeModelsList(fallback.models, fallback.modelCities);
+        fallback.closings = [];
+        fallback.weeklyReports = [];
+        return fallback;
+      }
+    }
+
+    let state = loadState();
+    let activeTab = "bl";
+    let searchQuery = "";
+    let modelCityFilter = "Все";
+    let infoSubTab = "rules";
+    let opsSubTab = "acc";
+    let selectedAccIds = new Set();
+    let selectedShiftIds = new Set();
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    let toastTimer = null;
+    function showToast(message) {
+      const el = document.getElementById("toast");
+      if (!el) return;
+      el.textContent = String(message || "");
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.remove("show");
+      }, 2200);
+    }
+
+    function copyText(text) {
+      const value = String(text ?? "");
+      if (!value) {
+        showToast("Нечего копировать");
+        return;
+      }
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        navigator.clipboard.writeText(value).then(() => {
+          showToast("Скопировано");
+        }).catch(() => {
+          fallbackCopyText(value);
+        });
+      } else {
+        fallbackCopyText(value);
+      }
+    }
+
+    function fallbackCopyText(value) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("Скопировано");
+      } catch (e) {
+        showToast("Ошибка копирования");
+      }
+    }
+
+    function saveState() {
+      try {
+        const lightState = {
+          ...state,
+          models: Array.isArray(state.models)
+            ? state.models.map((m) => ({
+                ...m,
+                videos: Array.isArray(m.videos)
+                  ? m.videos.filter((v) => v && typeof v.src === "string" && !v.src.startsWith("blob:"))
+                  : [],
+                routeVideos: Array.isArray(m.routeVideos)
+                  ? m.routeVideos.filter((v) => v && typeof v.src === "string" && !v.src.startsWith("blob:"))
+                  : []
+              }))
+            : []
+        };
+        localStorage.setItem(STORE_KEY, JSON.stringify(lightState));
+      } catch (e) {
+        showToast("Не удалось сохранить данные (возможно, превышен лимит памяти для медиа)");
+      }
+      if (!isApplyingRemoteSnapshot) {
+        void pushStateToCloud(state);
+      }
+    }
+
+    async function pushStateToCloud(snapshotState) {
+      if (!db || !currentUser || !sharedDocRef || isApplyingRemoteSnapshot) return;
+      try {
+        await setDoc(sharedDocRef, {
+          dataJson: JSON.stringify(snapshotState),
+          updatedAt: Date.now(),
+          updatedBy: currentUser.uid || "member"
+        });
+        setSyncStatus("Синхронизация: общая база онлайн");
+      } catch (err) {
+        console.error("Shared sync write failed:", err);
+        setSyncStatus("Синхронизация: ошибка отправки (сохранено локально)");
+      }
+    }
+
+    async function initSharedGroupSync() {
+      if (!hasFirebaseConfig) {
+        setSyncStatus("Синхронизация: локальный режим");
+        return;
+      }
+
+      try {
+        const firebaseConfig = typeof rawFirebaseConfig === "string"
+          ? JSON.parse(rawFirebaseConfig)
+          : rawFirebaseConfig;
+
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        setSyncStatus("Синхронизация: вход...");
+        if (initialAuthToken) {
+          await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        currentUser = auth.currentUser;
+        if (!currentUser) {
+          setSyncStatus("Синхронизация: нет доступа");
+          return;
+        }
+
+        sharedDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_state", "main");
+
+        const existingSnap = await getDoc(sharedDocRef);
+        if (!existingSnap.exists()) {
+          await pushStateToCloud(state);
+        }
+
+        onSnapshot(
+          sharedDocRef,
+          (docSnap) => {
+            if (!docSnap.exists()) return;
+            const rawDoc = docSnap.data();
+            let parsedRemote = null;
+            try {
+              if (typeof rawDoc.dataJson === "string" && rawDoc.dataJson.trim()) {
+                parsedRemote = JSON.parse(rawDoc.dataJson);
+              } else if (rawDoc.state && typeof rawDoc.state === "object") {
+                parsedRemote = rawDoc.state;
+              }
+            } catch (parseErr) {
+              console.error("Failed to parse remote state:", parseErr);
+              return;
+            }
+
+            if (!parsedRemote) return;
+
+            const normalizedRemote = {
+              bl: Array.isArray(parsedRemote.bl) ? parsedRemote.bl : def.bl,
+              models: sanitizeModelsList(
+                Array.isArray(parsedRemote.models) ? parsedRemote.models : def.models,
+                Array.isArray(parsedRemote.modelCities) && parsedRemote.modelCities.length > 0
+                  ? parsedRemote.modelCities
+                  : BASE_MODEL_CITIES
+              ),
+              modelCities: Array.isArray(parsedRemote.modelCities) && parsedRemote.modelCities.length > 0
+                ? parsedRemote.modelCities
+                : [...BASE_MODEL_CITIES],
+              team: Array.isArray(parsedRemote.team) ? parsedRemote.team : def.team,
+              rules: Array.isArray(parsedRemote.rules) ? parsedRemote.rules : def.rules,
+              fines: Array.isArray(parsedRemote.fines) ? parsedRemote.fines : def.fines,
+              paymentMethods: Array.isArray(parsedRemote.paymentMethods) && parsedRemote.paymentMethods.length > 0
+                ? parsedRemote.paymentMethods
+                : JSON.parse(JSON.stringify(def.paymentMethods)),
+              oneTimeCodes: Array.isArray(parsedRemote.oneTimeCodes) && parsedRemote.oneTimeCodes.length > 0
+                ? parsedRemote.oneTimeCodes
+                : JSON.parse(JSON.stringify(def.oneTimeCodes)),
+              acc: Array.isArray(parsedRemote.acc) ? parsedRemote.acc : [],
+              shifts: Array.isArray(parsedRemote.shifts) ? parsedRemote.shifts : [],
+              closings: Array.isArray(parsedRemote.closings) ? parsedRemote.closings : [],
+              weeklyReports: Array.isArray(parsedRemote.weeklyReports) ? parsedRemote.weeklyReports : []
+            };
+
+            const remoteSerialized = JSON.stringify(normalizedRemote);
+            const currentSerialized = JSON.stringify(state);
+
+            if (remoteSerialized !== currentSerialized) {
+              isApplyingRemoteSnapshot = true;
+              try {
+                state = normalizedRemote;
+                try {
+                  localStorage.setItem(STORE_KEY, remoteSerialized);
+                } catch (lsErr) {}
+                renderMain();
+              } finally {
+                isApplyingRemoteSnapshot = false;
+              }
+            }
+            setSyncStatus("Синхронизация: общая база онлайн");
+          },
+          (snapErr) => {
+            console.error("Shared snapshot error:", snapErr);
+            setSyncStatus("Синхронизация: переподключение...");
+          }
+        );
+      } catch (initErr) {
+        console.error("Shared sync init error:", initErr);
+        setSyncStatus("Синхронизация: офлайн / локально");
+      }
+    }
+
+    function openSheet(htmlContent) {
+      const backdrop = document.getElementById("sheetBackdrop");
+      const sheet = document.getElementById("sheetContent");
+      if (!backdrop || !sheet) return;
+      sheet.innerHTML = htmlContent;
+      backdrop.classList.add("open");
+      const closeBtn = document.getElementById("closeSheetBtn");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", closeSheet);
+      }
+    }
+
+    function closeSheet() {
+      const backdrop = document.getElementById("sheetBackdrop");
+      if (backdrop) {
+        backdrop.classList.remove("open");
+      }
+    }
+
+    function formatAllPaymentMethodsText(methods) {
+      return (Array.isArray(methods) ? methods : [])
+        .map((m) => `${m.label || ""}\n${m.value || ""}`.trim())
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    function openSidePaymentDrawer(editMode = false) {
+      const drawer = document.getElementById("sidePaymentDrawer");
+      const panel = document.getElementById("sidePaymentPanel");
+      if (!drawer || !panel) return;
+
+      if (!Array.isArray(state.paymentMethods) || state.paymentMethods.length === 0) {
+        state.paymentMethods = JSON.parse(JSON.stringify(def.paymentMethods));
+      }
+
+      const methods = state.paymentMethods;
+      const allText = formatAllPaymentMethodsText(methods);
+
+      panel.innerHTML = `
+        <div class="sheet-header" style="margin-bottom:4px;">
+          <div>
+            <div class="sheet-title">Методы оплаты</div>
+            <div class="card-sub" style="margin-top:2px;">Быстрая заметка с реквизитами</div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="mini-btn" id="toggleEditPaymentsBtn">${editMode ? "Готово" : "✎ Изменить"}</button>
+            <button type="button" class="icon-btn" id="closeSidePaymentBtn" aria-label="Закрыть заметку">✕</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn-primary" id="copyAllPaymentsBtn" style="width:100%;">📋 Копировать все реквизиты</button>
+
+        ${editMode ? `
+          <form id="editPaymentsForm" style="display:flex; flex-direction:column; gap:10px;">
+            ${methods.map((m, idx) => `
+              <div class="detail-block" style="margin-bottom:0;">
+                <div class="form-group" style="margin-bottom:8px;">
+                  <label class="form-label">Способ оплаты #${idx + 1}</label>
+                  <input class="form-control pm-label-input" type="text" value="${escapeHtml(m.label || "")}" required />
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Реквизиты / адрес</label>
+                  <input class="form-control pm-value-input" type="text" value="${escapeHtml(m.value || "")}" required />
+                </div>
+              </div>
+            `).join("")}
+            <button type="submit" class="btn-primary" style="width:100%;">Сохранить реквизиты</button>
+          </form>
+        ` : `
+          <div class="card-list">
+            ${methods.map((m) => `
+              <div class="detail-block" style="margin-bottom:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                  <div class="detail-label" style="margin:0; font-size:12px; color:var(--text);">${escapeHtml(m.label || "")}</div>
+                  <button type="button" class="mini-btn copy-single-pm-btn" data-val="${escapeHtml(m.value || "")}">Копировать</button>
+                </div>
+                <div class="detail-value" style="font-weight:600; word-break:break-all; user-select:all;">${escapeHtml(m.value || "")}</div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      `;
+
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden", "false");
+
+      document.getElementById("closeSidePaymentBtn").addEventListener("click", closeSidePaymentDrawer);
+      document.getElementById("toggleEditPaymentsBtn").addEventListener("click", () => {
+        openSidePaymentDrawer(!editMode);
+      });
+
+      const copyAllBtn = document.getElementById("copyAllPaymentsBtn");
+      if (copyAllBtn) {
+        copyAllBtn.addEventListener("click", () => copyText(allText));
+      }
+
+      panel.querySelectorAll(".copy-single-pm-btn").forEach((btn) => {
+        btn.addEventListener("click", () => copyText(btn.dataset.val || ""));
+      });
+
+      const editForm = document.getElementById("editPaymentsForm");
+      if (editForm) {
+        editForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const labels = Array.from(editForm.querySelectorAll(".pm-label-input")).map((el) => el.value.trim());
+          const values = Array.from(editForm.querySelectorAll(".pm-value-input")).map((el) => el.value.trim());
+          state.paymentMethods = labels.map((lbl, i) => ({
+            id: methods[i]?.id || `pm_${i + 1}`,
+            label: lbl || `Метод ${i + 1}`,
+            value: values[i] || ""
+          }));
+          saveState();
+          openSidePaymentDrawer(false);
+          showToast("Реквизиты сохранены");
+        });
+      }
+    }
+
+    function closeSidePaymentDrawer() {
+      const drawer = document.getElementById("sidePaymentDrawer");
+      if (drawer) {
+        drawer.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    function formatOneTimeCodeItemText(item) {
+      return `${item.modelName || ""}\n${item.code || ""}`.trim();
+    }
+
+    function formatAllOneTimeCodesText(list) {
+      return (Array.isArray(list) ? list : [])
+        .map((item) => formatOneTimeCodeItemText(item))
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    function openSideOtcDrawer(editMode = false) {
+      const drawer = document.getElementById("sideOtcDrawer");
+      const panel = document.getElementById("sideOtcPanel");
+      if (!drawer || !panel) return;
+
+      if (!Array.isArray(state.oneTimeCodes) || state.oneTimeCodes.length === 0) {
+        state.oneTimeCodes = JSON.parse(JSON.stringify(def.oneTimeCodes));
+      }
+
+      const codes = state.oneTimeCodes;
+      const allText = formatAllOneTimeCodesText(codes);
+
+      panel.innerHTML = `
+        <div class="sheet-header" style="margin-bottom:4px;">
+          <div>
+            <div class="sheet-title">One time code</div>
+            <div class="card-sub" style="margin-top:2px;">Быстрая заметка с разовыми кодами</div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="mini-btn" id="toggleEditOtcBtn">${editMode ? "Готово" : "✎ Изменить"}</button>
+            <button type="button" class="icon-btn" id="closeSideOtcBtn" aria-label="Закрыть заметку">✕</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn-primary" id="copyAllOtcBtn" style="width:100%;">📋 Копировать все коды</button>
+
+        ${editMode ? `
+          <form id="editOtcForm" style="display:flex; flex-direction:column; gap:10px;">
+            ${codes.map((item, idx) => `
+              <div class="detail-block" style="margin-bottom:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                  <div class="detail-label" style="margin:0;">Код #${idx + 1}</div>
+                  ${codes.length > 1 ? `<button type="button" class="mini-btn danger remove-otc-row-btn" data-idx="${idx}">✕</button>` : ""}
+                </div>
+                <div class="form-group" style="margin-bottom:8px;">
+                  <label class="form-label">Имя модели</label>
+                  <input class="form-control otc-model-input" type="text" value="${escapeHtml(item.modelName || "")}" placeholder="имя модели" required />
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Код</label>
+                  <input class="form-control otc-code-input" type="text" value="${escapeHtml(item.code || "")}" placeholder="475121#" required />
+                </div>
+              </div>
+            `).join("")}
+            <button type="button" class="btn-secondary" id="addOtcRowBtn" style="width:100%;">+ Добавить код</button>
+            <button type="submit" class="btn-primary" style="width:100%;">Сохранить коды</button>
+          </form>
+        ` : `
+          <div class="card-list">
+            ${codes.map((item) => `
+              <div class="detail-block" style="margin-bottom:0;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                  <div class="detail-label" style="margin:0; font-size:12px; color:var(--text);">${escapeHtml(item.modelName || "")}</div>
+                  <button type="button" class="mini-btn copy-single-otc-btn" data-val="${escapeHtml(item.code || "")}">Копировать</button>
+                </div>
+                <div class="detail-value" style="font-weight:700; font-size:16px; user-select:all;">${escapeHtml(item.code || "")}</div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      `;
+
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden", "false");
+
+      document.getElementById("closeSideOtcBtn").addEventListener("click", closeSideOtcDrawer);
+      document.getElementById("toggleEditOtcBtn").addEventListener("click", () => {
+        openSideOtcDrawer(!editMode);
+      });
+
+      const copyAllBtn = document.getElementById("copyAllOtcBtn");
+      if (copyAllBtn) {
+        copyAllBtn.addEventListener("click", () => copyText(allText));
+      }
+
+      panel.querySelectorAll(".copy-single-otc-btn").forEach((btn) => {
+        btn.addEventListener("click", () => copyText(btn.dataset.val || ""));
+      });
+
+      const editForm = document.getElementById("editOtcForm");
+      if (editForm) {
+        const readRowsFromForm = () => {
+          const models = Array.from(editForm.querySelectorAll(".otc-model-input")).map((el) => el.value);
+          const codeVals = Array.from(editForm.querySelectorAll(".otc-code-input")).map((el) => el.value);
+          return models.map((mName, i) => ({
+            id: state.oneTimeCodes[i]?.id || `otc_${Date.now()}_${i}`,
+            modelName: mName,
+            code: codeVals[i] ?? ""
+          }));
+        };
+
+        const addRowBtn = document.getElementById("addOtcRowBtn");
+        if (addRowBtn) {
+          addRowBtn.addEventListener("click", () => {
+            state.oneTimeCodes = [
+              ...readRowsFromForm(),
+              { id: "otc_" + Date.now(), modelName: "имя модели", code: "" }
+            ];
+            openSideOtcDrawer(true);
+          });
+        }
+
+        editForm.querySelectorAll(".remove-otc-row-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.idx);
+            const nextRows = readRowsFromForm();
+            nextRows.splice(idx, 1);
+            state.oneTimeCodes = nextRows.length > 0 ? nextRows : JSON.parse(JSON.stringify(def.oneTimeCodes));
+            openSideOtcDrawer(true);
+          });
+        });
+
+        editForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const rows = readRowsFromForm().map((r, i) => ({
+            id: r.id || `otc_${i + 1}`,
+            modelName: r.modelName.trim() || "имя модели",
+            code: r.code.trim()
+          }));
+          state.oneTimeCodes = rows;
+          saveState();
+          openSideOtcDrawer(false);
+          showToast("Коды сохранены");
+        });
+      }
+    }
+
+    function closeSideOtcDrawer() {
+      const drawer = document.getElementById("sideOtcDrawer");
+      if (drawer) {
+        drawer.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    function renderBlacklistTab(container) {
+      const list = Array.isArray(state.bl) ? state.bl : [];
+      const q = searchQuery.trim().toLowerCase();
+      const qDigits = q.replace(/\D/g, "");
+      const filtered = !q
+        ? list
+        : list.filter((item) => {
+            const phoneStr = String(item.phone || "").toLowerCase();
+            const phoneDigits = phoneStr.replace(/\D/g, "");
+            const reasonStr = String(item.reason || "").toLowerCase();
+            return (
+              phoneStr.includes(q) ||
+              reasonStr.includes(q) ||
+              (qDigits.length > 0 && phoneDigits.includes(qDigits))
+            );
+          });
+
+      container.innerHTML = `
+        <div class="section-header">
+          <div class="section-title">Чёрный список</div>
+          <div class="card-actions">
+            <span class="section-count">${filtered.length} / ${list.length}</span>
+            <button type="button" class="btn-primary" id="addBlacklistBtn">+ Добавить ЧС номер</button>
+          </div>
+        </div>
+        <div class="search-wrap">
+          <input class="search-input" id="blSearchInput" type="text" value="${escapeHtml(searchQuery)}" placeholder="Поиск по номеру или причине..." />
+          <button class="clear-search ${searchQuery ? "visible" : ""}" id="clearBlSearch" type="button">✕</button>
+        </div>
+        ${filtered.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-title">Ничего не найдено</div>
+            <div class="empty-state-sub">Измените запрос или очистите поиск.</div>
+          </div>
+        ` : `
+          <div class="card-list">
+            ${filtered.map((item) => `
+              <div class="card">
+                <div class="card-top">
+                  <div>
+                    <div class="card-title">${escapeHtml(item.phone || "")}</div>
+                    <div class="card-sub">${escapeHtml(item.reason || "ЧС")}</div>
+                  </div>
+                  <div class="card-actions">
+                    <button type="button" class="mini-btn copy-bl-btn" data-phone="${escapeHtml(item.phone || "")}">Копировать</button>
+                    <button type="button" class="mini-btn danger del-bl-btn" data-id="${escapeHtml(item.id || "")}">✕</button>
+                  </div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      `;
+
+      const addBlBtn = document.getElementById("addBlacklistBtn");
+      if (addBlBtn) {
+        addBlBtn.addEventListener("click", () => {
+          openSheet(`
+            <div class="sheet-header">
+              <div class="sheet-title">Добавить ЧС номер</div>
+              <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+            </div>
+            <form id="addBlacklistForm">
+              <div class="form-group">
+                <label class="form-label">Номер телефона</label>
+                <input class="form-control" name="phone" type="text" placeholder="Например: +995 555 00 00 00" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Причина</label>
+                <textarea class="form-control" name="reason" placeholder="Например: Фейк оплата / неадекват"></textarea>
+              </div>
+              <button type="submit" class="btn-primary" style="width:100%;">Добавить в ЧС</button>
+            </form>
+          `);
+
+          document.getElementById("addBlacklistForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const phone = String(fd.get("phone") || "").trim();
+            const reason = String(fd.get("reason") || "").trim() || "ЧС";
+            if (!phone) return;
+
+            if (!Array.isArray(state.bl)) state.bl = [];
+            state.bl.unshift({
+              id: "bl_" + Date.now(),
+              phone,
+              reason
+            });
+            saveState();
+            closeSheet();
+            renderBlacklistTab(container);
+            showToast("Номер добавлен в ЧС");
+          });
+        });
+      }
+
+      const input = document.getElementById("blSearchInput");
+      if (input) {
+        input.addEventListener("input", (e) => {
+          searchQuery = e.target.value;
+          renderBlacklistTab(container);
+          const nextInput = document.getElementById("blSearchInput");
+          if (nextInput) {
+            nextInput.focus();
+            nextInput.setSelectionRange(nextInput.value.length, nextInput.value.length);
+          }
+        });
+      }
+
+      const clearBtn = document.getElementById("clearBlSearch");
+      if (clearBtn) {
+        clearBtn.addEventListener("click", () => {
+          searchQuery = "";
+          renderBlacklistTab(container);
+        });
+      }
+
+      container.querySelectorAll(".copy-bl-btn").forEach((btn) => {
+        btn.addEventListener("click", () => copyText(btn.dataset.phone || ""));
+      });
+
+      container.querySelectorAll(".del-bl-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.bl = (state.bl || []).filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderBlacklistTab(container);
+          showToast("Номер удалён из ЧС");
+        });
+      });
+    }
+
+    function renderModelsTab(container) {
+      const cities = getAllowedModelCities();
+      const allModels = Array.isArray(state.models) ? state.models : [];
+      const filtered = modelCityFilter === "Все"
+        ? allModels
+        : allModels.filter((m) => String(m.city || "").toLowerCase() === modelCityFilter.toLowerCase());
+
+      container.innerHTML = `
+        <div class="section-header">
+          <div class="section-title">Модели</div>
+          <div class="card-actions">
+            <button type="button" class="btn-secondary" id="addCityBtn">+ Город</button>
+            <button type="button" class="btn-primary" id="addModelBtn">+ Модель</button>
+          </div>
+        </div>
+        <div class="chips-row">
+          <button type="button" class="chip ${modelCityFilter === "Все" ? "active" : ""}" data-city="Все">Все</button>
+          ${cities.map((c) => `
+            <button type="button" class="chip ${modelCityFilter.toLowerCase() === c.toLowerCase() ? "active" : ""}" data-city="${escapeHtml(c)}">${escapeHtml(c)}</button>
+          `).join("")}
+        </div>
+        ${filtered.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-title">Нет моделей в выбранном фильтре</div>
+            <div class="empty-state-sub">Переключите город, добавьте новый город или анкету модели.</div>
+          </div>
+        ` : `
+          <div class="card-list">
+            ${filtered.map((m) => {
+              const photos = Array.isArray(m.photos) ? m.photos : [];
+              const routePhotos = Array.isArray(m.routePhotos) ? m.routePhotos : [];
+              const videos = Array.isArray(m.videos) ? m.videos : [];
+              const routeVideos = Array.isArray(m.routeVideos) ? m.routeVideos : [];
+              const coverPhoto = photos[0] || "";
+              return `
+                <div class="card clickable open-model-card" data-id="${escapeHtml(m.id)}">
+                  <div class="model-card-header-row">
+                    ${coverPhoto ? `<img class="model-card-cover" src="${escapeHtml(coverPhoto)}" alt="${escapeHtml(m.name || "")}" onerror="this.style.display='none'" />` : ""}
+                    <div style="flex:1; min-width:0;">
+                      <div class="card-top">
+                        <div>
+                          <div class="card-title">${escapeHtml(m.name || "")}</div>
+                          <div class="card-sub">${escapeHtml(m.meta || "")}</div>
+                        </div>
+                        <div class="card-actions">
+                          <button type="button" class="mini-btn edit-model-btn" data-id="${escapeHtml(m.id)}">✎</button>
+                          <button type="button" class="mini-btn ${m.active !== false ? "status-on" : "status-off"} toggle-model-btn" data-id="${escapeHtml(m.id)}">
+                            ${m.active !== false ? "На смене" : "Выходной"}
+                          </button>
+                          <button type="button" class="mini-btn danger del-model-btn" data-id="${escapeHtml(m.id)}">✕</button>
+                        </div>
+                      </div>
+                      <div class="card-meta">
+                        <span class="pill">${escapeHtml(m.city || "")}</span>
+                        ${m.incall ? `<span class="pill">${escapeHtml(m.incall)}</span>` : ""}
+                        ${photos.length > 0 ? `<span class="pill">Фото: ${photos.length}</span>` : ""}
+                        ${videos.length > 0 ? `<span class="pill">Видео: ${videos.length}</span>` : ""}
+                        ${routePhotos.length > 0 ? `<span class="pill">Проходка фото: ${routePhotos.length}</span>` : ""}
+                        ${routeVideos.length > 0 ? `<span class="pill">Проходка видео: ${routeVideos.length}</span>` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  ${m.address ? `<div class="card-sub" style="margin-top:8px;">${escapeHtml(m.address)}</div>` : ""}
+                  <div class="model-quick-strip">
+                    <button type="button" class="mini-btn copy-model-pitch-btn" data-id="${escapeHtml(m.id)}">📋 Текст клиенту</button>
+                    <button type="button" class="mini-btn copy-model-addr-btn" data-id="${escapeHtml(m.id)}">📍 Адрес</button>
+                    <button type="button" class="mini-btn copy-model-link-btn" data-id="${escapeHtml(m.id)}">🔗 Ссылка</button>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `}
+      `;
+
+      document.getElementById("addModelBtn").addEventListener("click", () => {
+        const defaultCity = modelCityFilter !== "Все" ? modelCityFilter : (cities[0] || "Тбилиси");
+        openSheet(`
+          <div class="sheet-header">
+            <div class="sheet-title">Новая анкета модели</div>
+            <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+          </div>
+          <form id="createModelForm">
+            <div class="form-group">
+              <label class="form-label">Имя модели</label>
+              <input class="form-control" name="name" type="text" placeholder="Например: Алина" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Город</label>
+              <select class="form-control" name="city">
+                ${cities.map((c) => `
+                  <option value="${escapeHtml(c)}" ${c.toLowerCase() === defaultCity.toLowerCase() ? "selected" : ""}>${escapeHtml(c)}</option>
+                `).join("")}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Возраст / параметры</label>
+              <input class="form-control" name="meta" type="text" placeholder="Например: 20 лет · 168/52" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Incall / Outcall</label>
+              <input class="form-control" name="incall" type="text" placeholder="30м 500 / 1ч 700 GEL" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Адрес</label>
+              <textarea class="form-control" name="address" placeholder="Адрес, этаж, код"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ссылка на карту / адрес</label>
+              <input class="form-control" name="mapLink" type="text" placeholder="https://maps.google.com/..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Описание для клиента</label>
+              <textarea class="form-control" name="description" placeholder="Текст описания для клиента"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="upload-dropzone" for="newModelPhotosInput">+ Загрузить фото модели (<span id="newModelPhotosCount">0</span>)</label>
+              <input id="newModelPhotosInput" type="file" accept="image/*" multiple style="display:none;" />
+            </div>
+            <div class="form-group">
+              <label class="upload-dropzone" for="newModelRoutePhotosInput">+ Загрузить фото проходки (<span id="newModelRoutePhotosCount">0</span>)</label>
+              <input id="newModelRoutePhotosInput" type="file" accept="image/*" multiple style="display:none;" />
+            </div>
+            <div class="form-group">
+              <label class="upload-dropzone" for="newModelVideosInput">+ Загрузить видео модели (<span id="newModelVideosCount">0</span>)</label>
+              <input id="newModelVideosInput" type="file" accept="video/*" multiple style="display:none;" />
+            </div>
+            <div class="form-group">
+              <label class="upload-dropzone" for="newModelRouteVideosInput">+ Загрузить видео проходки (<span id="newModelRouteVideosCount">0</span>)</label>
+              <input id="newModelRouteVideosInput" type="file" accept="video/*" multiple style="display:none;" />
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;">Создать анкету</button>
+          </form>
+        `);
+
+        let pendingPhotos = [];
+        let pendingRoutePhotos = [];
+        let pendingVideos = [];
+        let pendingRouteVideos = [];
+
+        document.getElementById("newModelPhotosInput").addEventListener("change", async (e) => {
+          const added = await compressImageFiles(e.target.files);
+          pendingPhotos = [...pendingPhotos, ...added];
+          const el = document.getElementById("newModelPhotosCount");
+          if (el) el.textContent = String(pendingPhotos.length);
+          showToast(`Выбрано фото: ${pendingPhotos.length}`);
+        });
+
+        document.getElementById("newModelRoutePhotosInput").addEventListener("change", async (e) => {
+          const added = await compressImageFiles(e.target.files);
+          pendingRoutePhotos = [...pendingRoutePhotos, ...added];
+          const el = document.getElementById("newModelRoutePhotosCount");
+          if (el) el.textContent = String(pendingRoutePhotos.length);
+          showToast(`Выбрано фото проходки: ${pendingRoutePhotos.length}`);
+        });
+
+        document.getElementById("newModelVideosInput").addEventListener("change", async (e) => {
+          const added = await readVideoFiles(e.target.files);
+          pendingVideos = [...pendingVideos, ...added];
+          const el = document.getElementById("newModelVideosCount");
+          if (el) el.textContent = String(pendingVideos.length);
+          showToast(`Выбрано видео: ${pendingVideos.length}`);
+        });
+
+        document.getElementById("newModelRouteVideosInput").addEventListener("change", async (e) => {
+          const added = await readVideoFiles(e.target.files);
+          pendingRouteVideos = [...pendingRouteVideos, ...added];
+          const el = document.getElementById("newModelRouteVideosCount");
+          if (el) el.textContent = String(pendingRouteVideos.length);
+          showToast(`Выбрано видео проходки: ${pendingRouteVideos.length}`);
+        });
+
+        document.getElementById("createModelForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const allowed = getAllowedModelCities();
+          const chosenCity = normalizeModelCity(fd.get("city"), allowed) || allowed[0] || "Тбилиси";
+          const newModel = {
+            id: "m_" + Date.now(),
+            name: String(fd.get("name") || "").trim(),
+            city: chosenCity,
+            meta: String(fd.get("meta") || "").trim(),
+            district: "",
+            incall: String(fd.get("incall") || "").trim(),
+            outcall: "",
+            address: String(fd.get("address") || "").trim(),
+            mapLink: String(fd.get("mapLink") || "").trim(),
+            description: String(fd.get("description") || "").trim(),
+            services: "",
+            extras: "",
+            phones: "",
+            photos: pendingPhotos,
+            routePhotos: pendingRoutePhotos,
+            videos: pendingVideos,
+            routeVideos: pendingRouteVideos,
+            active: true
+          };
+          if (!Array.isArray(state.models)) state.models = [];
+          state.models.unshift(newModel);
+          saveState();
+          closeSheet();
+          renderModelsTab(container);
+          showToast("Анкета добавлена");
+        });
+      });
+
+      document.getElementById("addCityBtn").addEventListener("click", () => {
+        openSheet(`
+          <div class="sheet-header">
+            <div class="sheet-title">Добавить город</div>
+            <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+          </div>
+          <form id="addCityForm">
+            <div class="form-group">
+              <label class="form-label">Название города</label>
+              <input class="form-control" name="cityName" type="text" placeholder="Например: Батуми" required />
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;">Добавить</button>
+          </form>
+        `);
+        document.getElementById("addCityForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const clean = normalizeCityName(fd.get("cityName"));
+          if (!clean) {
+            showToast("Некорректное название");
+            return;
+          }
+          if (!Array.isArray(state.modelCities)) state.modelCities = [...BASE_MODEL_CITIES];
+          if (!state.modelCities.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+            state.modelCities.push(clean);
+            saveState();
+          }
+          modelCityFilter = clean;
+          closeSheet();
+          renderModelsTab(container);
+          showToast(`Город «${clean}» добавлен`);
+        });
+      });
+
+      container.querySelectorAll(".chip[data-city]").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          modelCityFilter = chip.dataset.city || "Все";
+          renderModelsTab(container);
+        });
+      });
+
+      container.querySelectorAll(".open-model-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          openModelDetailSheet(card.dataset.id);
+        });
+      });
+
+      container.querySelectorAll(".edit-model-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openEditModelSheet(btn.dataset.id);
+        });
+      });
+
+      container.querySelectorAll(".copy-model-pitch-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const target = (state.models || []).find((x) => x.id === btn.dataset.id);
+          copyText(buildModelClientText(target));
+        });
+      });
+
+      container.querySelectorAll(".copy-model-addr-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const target = (state.models || []).find((x) => x.id === btn.dataset.id);
+          copyText(target?.address || "");
+        });
+      });
+
+      container.querySelectorAll(".copy-model-link-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const target = (state.models || []).find((x) => x.id === btn.dataset.id);
+          const link = getModelMapUrl(target);
+          if (!link) {
+            showToast("Ссылка на адрес отсутствует");
+            return;
+          }
+          copyText(link);
+        });
+      });
+
+      container.querySelectorAll(".toggle-model-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const target = (state.models || []).find((x) => x.id === btn.dataset.id);
+          if (target) {
+            target.active = !(target.active !== false);
+            saveState();
+            renderModelsTab(container);
+          }
+        });
+      });
+
+      container.querySelectorAll(".del-model-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          state.models = (state.models || []).filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderModelsTab(container);
+          showToast("Анкета удалена");
+        });
+      });
+    }
+
+    function renderTeamTab(container) {
+      const members = Array.isArray(state.team) ? state.team : [];
+      container.innerHTML = `
+        <div class="section-header">
+          <div class="section-title">Команда</div>
+          <div class="card-actions">
+            <span class="section-count">${members.length}</span>
+            <button type="button" class="btn-primary" id="addTeamMemberBtn">+ Добавить</button>
+          </div>
+        </div>
+        ${members.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-title">Список команды пуст</div>
+            <div class="empty-state-sub">Нажмите «+ Добавить», чтобы добавить участника команды.</div>
+          </div>
+        ` : `
+          <div class="card-list">
+            ${members.map((t) => `
+              <div class="card">
+                <div class="card-top">
+                  <div>
+                    <div class="card-title">${escapeHtml(t.name || "")}</div>
+                    <div class="card-sub">${escapeHtml(t.role || "")}</div>
+                  </div>
+                  <div class="card-actions">
+                    <button type="button" class="mini-btn edit-team-btn" data-id="${escapeHtml(t.id || "")}">✎ Изменить</button>
+                    <button type="button" class="mini-btn danger del-team-btn" data-id="${escapeHtml(t.id || "")}">✕</button>
+                  </div>
+                </div>
+                ${t.note ? `<div class="card-meta"><span class="pill">${escapeHtml(t.note)}</span></div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        `}
+      `;
+
+      const openTeamMemberSheet = (member = null) => {
+        const isEdit = Boolean(member);
+        openSheet(`
+          <div class="sheet-header">
+            <div class="sheet-title">${isEdit ? "Редактировать участника" : "Новый участник команды"}</div>
+            <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+          </div>
+          <form id="teamMemberForm">
+            <div class="form-group">
+              <label class="form-label">Имя / ник</label>
+              <input class="form-control" name="name" type="text" value="${escapeHtml(member?.name || "")}" placeholder="Например: Denny" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Роль / должность</label>
+              <input class="form-control" name="role" type="text" value="${escapeHtml(member?.role || "")}" placeholder="Например: Оператор" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Заметка / рабочие номера</label>
+              <textarea class="form-control" name="note" placeholder="Номера, смены или комментарии">${escapeHtml(member?.note || "")}</textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;">${isEdit ? "Сохранить изменения" : "Добавить в команду"}</button>
+          </form>
+        `);
+
+        document.getElementById("teamMemberForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const name = String(fd.get("name") || "").trim();
+          const role = String(fd.get("role") || "").trim();
+          const note = String(fd.get("note") || "").trim();
+          if (!name) return;
+
+          if (!Array.isArray(state.team)) state.team = [];
+
+          if (isEdit && member) {
+            const target = state.team.find((x) => x.id === member.id);
+            if (target) {
+              target.name = name;
+              target.role = role;
+              target.note = note;
+            }
+          } else {
+            state.team.unshift({
+              id: "t_" + Date.now(),
+              name,
+              role,
+              note
+            });
+          }
+
+          saveState();
+          closeSheet();
+          renderTeamTab(container);
+          showToast(isEdit ? "Данные участника обновлены" : "Участник добавлен");
+        });
+      };
+
+      const addBtn = document.getElementById("addTeamMemberBtn");
+      if (addBtn) {
+        addBtn.addEventListener("click", () => openTeamMemberSheet(null));
+      }
+
+      container.querySelectorAll(".edit-team-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = (state.team || []).find((x) => x.id === btn.dataset.id);
+          if (target) openTeamMemberSheet(target);
+        });
+      });
+
+      container.querySelectorAll(".del-team-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.team = (state.team || []).filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderTeamTab(container);
+          showToast("Участник удалён");
+        });
+      });
+    }
+
+    function renderInfoTab(container) {
+      const rules = Array.isArray(state.rules) ? state.rules : [];
+      const fines = Array.isArray(state.fines) ? state.fines : [];
+
+      container.innerHTML = `
+        <div class="section-header">
+          <div class="section-title">Регламент и штрафы</div>
+        </div>
+        <div class="segmented">
+          <button type="button" class="seg-btn ${infoSubTab === "rules" ? "active" : ""}" data-infosub="rules">Правила (${rules.length})</button>
+          <button type="button" class="seg-btn ${infoSubTab === "fines" ? "active" : ""}" data-infosub="fines">Штрафы (${fines.length})</button>
+        </div>
+        <div id="infoSubContent"></div>
+      `;
+
+      container.querySelectorAll("[data-infosub]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          infoSubTab = btn.dataset.infosub;
+          renderInfoTab(container);
+        });
+      });
+
+      const sub = document.getElementById("infoSubContent");
+      if (infoSubTab === "rules") {
+        sub.innerHTML = `
+          <div class="card-list">
+            ${rules.map((r, i) => `
+              <div class="card">
+                <div class="card-title">Пункт ${i + 1}</div>
+                <div class="card-sub" style="margin-top:6px;">${escapeHtml(r.text || "")}</div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      } else {
+        sub.innerHTML = `
+          <div class="card-list">
+            ${fines.map((f) => `
+              <div class="card">
+                <div class="card-top">
+                  <div class="card-title" style="font-size:15px;">${escapeHtml(f.title || "")}</div>
+                  <span class="pill danger">${escapeHtml(f.amount || "")}</span>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }
+    }
+
+    function formatTodayDotDate() {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yyyy = String(now.getFullYear());
+      return `${dd}.${mm}.${yyyy}`;
+    }
+
+    function parseNumericPrice(val) {
+      const cleaned = String(val ?? "").replace(/\s+/g, "").replace(",", ".");
+      const match = cleaned.match(/-?\d+(?:\.\d+)?/);
+      return match ? Number(match[0]) || 0 : 0;
+    }
+
+    function formatAccountingEntryText(entry) {
+      const lines = [
+        entry.date || "",
+        `Модель: ${entry.model || ""}`,
+        `Продолжительность: ${entry.duration || ""}`,
+        `Прайс: ${entry.price || ""}`,
+        `Оператор: ${entry.operator || ""}`,
+        `Время: ${entry.time || ""}`,
+        `Номер клиента: ${entry.clientPhone || ""}`,
+        `Отзыв: ${entry.review || ""}`,
+        `Адрес: ${entry.address || ""}`
+      ];
+      return lines.join("\n").trim();
+    }
+
+    function buildShiftReportText(report) {
+      const orders = Array.isArray(report.orders) ? report.orders : [];
+      const orderBlocks = orders.map((ord) => [
+        `Модель:${ord.model || ""}`,
+        `Продолжительность:${ord.duration || ""}`,
+        `Прайс: ${ord.price || ""}`
+      ].join("\n")).join("\n\n");
+
+      const parts = [
+        report.date || "",
+        `Кол-во соо: ${report.messagesCount || ""}`,
+        `Заказы-${report.ordersCount || orders.length || 0}`
+      ];
+      if (orderBlocks) parts.push(orderBlocks);
+      parts.push(`Оператор:${report.operator || ""}`);
+      parts.push(`Тотал ${report.total || ""}`.trim());
+      return parts.join("\n\n").trim();
+    }
+
+    function buildDailyClosingText(closing) {
+      const slashLeft = String(closing.slashLeft ?? "").trim();
+      const slashRight = String(closing.slashRight ?? "").trim();
+      const slashLine = `${slashLeft}/${slashRight}`;
+      return [
+        closing.date || formatTodayDotDate(),
+        `ТОТАЛ ДНЯ: ${closing.totalDay ?? ""}`.trim(),
+        slashLine
+      ].join("\n");
+    }
+
+    function buildWeeklyReportText(weekly) {
+      return [
+        "ВЫПЛАЧЕНО",
+        "🥩🥩🥩🥩🥩🥩🥩🥩🥩",
+        `ТОТАЛ НЕДЕЛИ ГРУЗИЯ/АРМЕНИЯ/ДУБАЙ : ${weekly.totalWeek ?? ""}`.trim()
+      ].join("\n\n");
+    }
+
+    function openAddAccountingSheet(onSaved) {
+      const modelOptions = (state.models || []).map((m) => m.name).filter(Boolean);
+      const teamOptions = (state.team || []).map((t) => t.name).filter(Boolean);
+
+      openSheet(`
+        <div class="sheet-header">
+          <div class="sheet-title">Новая запись бухгалтерии</div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="addAccountingForm">
+          <div class="form-group">
+            <label class="form-label">Дата</label>
+            <input class="form-control" name="date" type="text" value="${escapeHtml(formatTodayDotDate())}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Модель</label>
+            <input class="form-control" name="model" type="text" list="accModelsList" placeholder="Имя модели" />
+            <datalist id="accModelsList">
+              ${modelOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Продолжительность</label>
+            <input class="form-control" name="duration" type="text" placeholder="Например: 1ч / 30м" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Прайс</label>
+            <input class="form-control" name="price" type="text" placeholder="Например: 700 GEL / 5300" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Оператор</label>
+            <input class="form-control" name="operator" type="text" list="accOperatorsList" placeholder="Имя оператора" />
+            <datalist id="accOperatorsList">
+              ${teamOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Время</label>
+            <input class="form-control" name="time" type="text" placeholder="Например: 21:30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Номер клиента</label>
+            <input class="form-control" name="clientPhone" type="text" placeholder="+995..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Отзыв</label>
+            <input class="form-control" name="review" type="text" placeholder="Комментарий / отзыв" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Адрес</label>
+            <input class="form-control" name="address" type="text" placeholder="Адрес или локация" />
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;">Сохранить запись</button>
+        </form>
+      `);
+
+      document.getElementById("addAccountingForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        if (!Array.isArray(state.acc)) state.acc = [];
+        const newId = "acc_" + Date.now();
+        state.acc.unshift({
+          id: newId,
+          date: String(fd.get("date") || "").trim(),
+          model: String(fd.get("model") || "").trim(),
+          duration: String(fd.get("duration") || "").trim(),
+          price: String(fd.get("price") || "").trim(),
+          operator: String(fd.get("operator") || "").trim(),
+          time: String(fd.get("time") || "").trim(),
+          clientPhone: String(fd.get("clientPhone") || "").trim(),
+          review: String(fd.get("review") || "").trim(),
+          address: String(fd.get("address") || "").trim()
+        });
+        selectedAccIds.add(newId);
+        saveState();
+        closeSheet();
+        if (typeof onSaved === "function") onSaved();
+        showToast("Запись добавлена");
+      });
+    }
+
+    function openCloseCashSheet(onSaved) {
+      const allAcc = Array.isArray(state.acc) ? state.acc : [];
+      const targetEntries = selectedAccIds.size > 0
+        ? allAcc.filter((item) => selectedAccIds.has(item.id))
+        : allAcc;
+      const calculatedSum = targetEntries.reduce((sum, item) => sum + parseNumericPrice(item.price), 0);
+
+      openSheet(`
+        <div class="sheet-header">
+          <div class="sheet-title">Закрытие кассы за день</div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="closeCashForm">
+          <div class="form-group">
+            <label class="form-label">Дата</label>
+            <input class="form-control" name="date" type="text" value="${escapeHtml(formatTodayDotDate())}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ТОТАЛ ДНЯ: (подсчитано по записям: ${calculatedSum})</label>
+            <input class="form-control" id="totalDayInput" name="totalDay" type="text" value="${calculatedSum > 0 ? String(calculatedSum) : ""}" placeholder="Например: 5300" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Значение до / после слеша (формат 100000/34650 или 100000/)</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input class="form-control" name="slashLeft" type="text" placeholder="100000" />
+              <span style="font-weight:700;">/</span>
+              <input class="form-control" name="slashRight" type="text" placeholder="34650" />
+            </div>
+          </div>
+          <div class="quick-actions-grid" style="margin-bottom:0;">
+            <button type="button" class="btn-secondary" id="copyClosingPreviewBtn">📋 Копировать</button>
+            <button type="submit" class="btn-primary">Сохранить закрытие</button>
+          </div>
+        </form>
+      `);
+
+      const form = document.getElementById("closeCashForm");
+      const getCurrentClosingPayload = () => {
+        const fd = new FormData(form);
+        return {
+          id: "cl_" + Date.now(),
+          date: String(fd.get("date") || "").trim(),
+          totalDay: String(fd.get("totalDay") || "").trim(),
+          slashLeft: String(fd.get("slashLeft") || "").trim(),
+          slashRight: String(fd.get("slashRight") || "").trim(),
+          count: targetEntries.length
+        };
+      };
+
+      document.getElementById("copyClosingPreviewBtn").addEventListener("click", () => {
+        copyText(buildDailyClosingText(getCurrentClosingPayload()));
+      });
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!Array.isArray(state.closings)) state.closings = [];
+        const payload = getCurrentClosingPayload();
+        payload.count = Array.isArray(state.acc) ? state.acc.length : 0;
+        state.closings.unshift(payload);
+        saveState();
+        closeSheet();
+        if (typeof onSaved === "function") onSaved();
+        showToast("Касса закрыта");
+      });
+    }
+
+    function openAddShiftReportSheet(onSaved) {
+      openSheet(`
+        <div class="sheet-header">
+          <div class="sheet-title">Отчёт смены</div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="addShiftReportForm">
+          <div class="form-group">
+            <label class="form-label">Дата</label>
+            <input class="form-control" name="date" type="text" value="${escapeHtml(formatTodayDotDate())}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Кол-во соо</label>
+            <input class="form-control" name="messagesCount" type="text" placeholder="Количество сообщений" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Заказы (кол-во)</label>
+            <input class="form-control" id="shiftOrdersCountInput" name="ordersCount" type="text" value="2" />
+          </div>
+          <div id="shiftOrdersContainer"></div>
+          <div class="form-group">
+            <button type="button" class="btn-secondary" id="addShiftOrderBlockBtn" style="width:100%;">+ Добавить заказ</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Оператор</label>
+            <input class="form-control" name="operator" type="text" placeholder="Имя оператора" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Тотал</label>
+            <input class="form-control" name="total" type="text" placeholder="Итоговая сумма" />
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;">Сохранить отчёт</button>
+        </form>
+      `);
+
+      const ordersContainer = document.getElementById("shiftOrdersContainer");
+      const ordersCountInput = document.getElementById("shiftOrdersCountInput");
+      let orderBlocksCount = 2;
+
+      const renderOrderBlocks = () => {
+        const existingValues = Array.from(ordersContainer.querySelectorAll(".shift-order-block")).map((block) => ({
+          model: block.querySelector(".ord-model")?.value || "",
+          duration: block.querySelector(".ord-duration")?.value || "",
+          price: block.querySelector(".ord-price")?.value || ""
+        }));
+
+        ordersContainer.innerHTML = Array.from({ length: orderBlocksCount }, (_, idx) => {
+          const prev = existingValues[idx] || { model: "", duration: "", price: "" };
+          return `
+            <div class="detail-block shift-order-block">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div class="detail-label" style="margin:0;">Заказ #${idx + 1}</div>
+                ${orderBlocksCount > 1 ? `<button type="button" class="mini-btn danger remove-order-block-btn" data-idx="${idx}">✕</button>` : ""}
+              </div>
+              <div class="form-group" style="margin-bottom:8px;">
+                <label class="form-label">Модель</label>
+                <input class="form-control ord-model" type="text" value="${escapeHtml(prev.model)}" placeholder="Например: Оксана" />
+              </div>
+              <div class="form-group" style="margin-bottom:8px;">
+                <label class="form-label">Продолжительность</label>
+                <input class="form-control ord-duration" type="text" value="${escapeHtml(prev.duration)}" placeholder="Например: 1ч" />
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Прайс</label>
+                <input class="form-control ord-price" type="text" value="${escapeHtml(prev.price)}" placeholder="Например: 700 GEL" />
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        if (ordersCountInput) {
+          ordersCountInput.value = String(orderBlocksCount);
+        }
+
+        ordersContainer.querySelectorAll(".remove-order-block-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const removeIdx = Number(btn.dataset.idx);
+            const currentVals = Array.from(ordersContainer.querySelectorAll(".shift-order-block")).map((block) => ({
+              model: block.querySelector(".ord-model")?.value || "",
+              duration: block.querySelector(".ord-duration")?.value || "",
+              price: block.querySelector(".ord-price")?.value || ""
+            }));
+            currentVals.splice(removeIdx, 1);
+            orderBlocksCount = Math.max(1, orderBlocksCount - 1);
+            renderOrderBlocks();
+            ordersContainer.querySelectorAll(".shift-order-block").forEach((block, i) => {
+              if (currentVals[i]) {
+                block.querySelector(".ord-model").value = currentVals[i].model;
+                block.querySelector(".ord-duration").value = currentVals[i].duration;
+                block.querySelector(".ord-price").value = currentVals[i].price;
+              }
+            });
+          });
+        });
+      };
+
+      renderOrderBlocks();
+
+      document.getElementById("addShiftOrderBlockBtn").addEventListener("click", () => {
+        orderBlocksCount += 1;
+        renderOrderBlocks();
+      });
+
+      document.getElementById("addShiftReportForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const orders = Array.from(ordersContainer.querySelectorAll(".shift-order-block")).map((block) => ({
+          model: String(block.querySelector(".ord-model")?.value || "").trim(),
+          duration: String(block.querySelector(".ord-duration")?.value || "").trim(),
+          price: String(block.querySelector(".ord-price")?.value || "").trim()
+        }));
+
+        if (!Array.isArray(state.shifts)) state.shifts = [];
+        const newId = "sh_" + Date.now();
+        const rawOrdersCount = String(fd.get("ordersCount") || "").trim();
+        state.shifts.unshift({
+          id: newId,
+          date: String(fd.get("date") || "").trim(),
+          messagesCount: String(fd.get("messagesCount") || "").trim(),
+          ordersCount: rawOrdersCount || String(orders.length),
+          orders,
+          operator: String(fd.get("operator") || "").trim(),
+          total: String(fd.get("total") || "").trim()
+        });
+        selectedShiftIds.add(newId);
+        saveState();
+        closeSheet();
+        if (typeof onSaved === "function") onSaved();
+        showToast("Отчёт смены сохранён");
+      });
+    }
+
+    function openWeeklyReportSheet(onSaved) {
+      const allShifts = Array.isArray(state.shifts) ? state.shifts : [];
+      const chosenShifts = selectedShiftIds.size > 0
+        ? allShifts.filter((s) => selectedShiftIds.has(s.id))
+        : allShifts;
+      const sumFromShifts = chosenShifts.reduce((accSum, s) => accSum + parseNumericPrice(s.total), 0);
+
+      openSheet(`
+        <div class="sheet-header">
+          <div class="sheet-title">Недельный отчёт (ВЫПЛАЧЕНО)</div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">✕</button>
+        </div>
+        <form id="weeklyReportForm">
+          <div class="form-group">
+            <label class="form-label">ТОТАЛ НЕДЕЛИ ГРУЗИЯ/АРМЕНИЯ/ДУБАЙ : (сумма по отчётам: ${sumFromShifts})</label>
+            <input class="form-control" name="totalWeek" type="text" value="${sumFromShifts > 0 ? String(sumFromShifts) : ""}" placeholder="Введите сумму недели" />
+          </div>
+          <div class="detail-block">
+            <div class="detail-label">Предпросмотр</div>
+            <div class="detail-value" id="weeklyPreviewText">${escapeHtml(buildWeeklyReportText({ totalWeek: sumFromShifts > 0 ? String(sumFromShifts) : "" }))}</div>
+          </div>
+          <div class="quick-actions-grid" style="margin-bottom:0;">
+            <button type="button" class="btn-secondary" id="copyWeeklyPreviewBtn">📋 Копировать</button>
+            <button type="submit" class="btn-primary">Сохранить отчёт</button>
+          </div>
+        </form>
+      `);
+
+      const form = document.getElementById("weeklyReportForm");
+      const totalWeekInput = form.querySelector('input[name="totalWeek"]');
+      const previewEl = document.getElementById("weeklyPreviewText");
+
+      const updatePreview = () => {
+        if (previewEl) {
+          previewEl.textContent = buildWeeklyReportText({ totalWeek: totalWeekInput.value.trim() });
+        }
+      };
+
+      totalWeekInput.addEventListener("input", updatePreview);
+
+      document.getElementById("copyWeeklyPreviewBtn").addEventListener("click", () => {
+        copyText(buildWeeklyReportText({ totalWeek: totalWeekInput.value.trim() }));
+      });
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!Array.isArray(state.weeklyReports)) state.weeklyReports = [];
+        state.weeklyReports.unshift({
+          id: "wk_" + Date.now(),
+          createdAt: formatTodayDotDate(),
+          totalWeek: totalWeekInput.value.trim(),
+          count: Array.isArray(state.shifts) ? state.shifts.length : 0
+        });
+        saveState();
+        closeSheet();
+        if (typeof onSaved === "function") onSaved();
+        showToast("Недельный отчёт сохранён");
+      });
+    }
+
+    function renderAccountingSubTab(container) {
+      const entries = Array.isArray(state.acc) ? state.acc : [];
+      const closings = Array.isArray(state.closings) ? state.closings : [];
+      const totalSum = entries.reduce((s, item) => s + parseNumericPrice(item.price), 0);
+      const selectedSum = entries
+        .filter((item) => selectedAccIds.has(item.id))
+        .reduce((s, item) => s + parseNumericPrice(item.price), 0);
+      const allSelected = entries.length > 0 && entries.every((item) => selectedAccIds.has(item.id));
+
+      // `entries` is ordered newest-first (index 0 is newest, entries.length - 1 is oldest).
+      // Each closing stores `count` = how many entries existed when that closing was made.
+      // Placing each closing right below the entries added after it and above the older entries
+      // that existed before it keeps: [newest entries] -> [latest closing] -> [earlier entries] -> [older closing]...
+      const chronologicalClosings = [...closings].reverse();
+      const feedItems = [];
+      let entryCursor = 0;
+
+      for (let i = chronologicalClosings.length - 1; i >= 0; i -= 1) {
+        const cl = chronologicalClosings[i];
+        const snapshotCount = Math.max(0, Math.min(entries.length, Number(cl.count ?? entries.length)));
+        const newerEntriesCount = Math.max(0, entries.length - snapshotCount);
+
+        while (entryCursor < newerEntriesCount && entryCursor < entries.length) {
+          feedItems.push({ kind: "entry", item: entries[entryCursor] });
+          entryCursor += 1;
+        }
+        feedItems.push({ kind: "closing", item: cl });
+      }
+
+      while (entryCursor < entries.length) {
+        feedItems.push({ kind: "entry", item: entries[entryCursor] });
+        entryCursor += 1;
+      }
+
+      container.innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Записей в кассе</div>
+            <div class="stat-val">${entries.length}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Выбрано / Всего</div>
+            <div class="stat-val">${selectedAccIds.size > 0 ? selectedSum : totalSum}</div>
+          </div>
+        </div>
+
+        <div class="card-actions" style="margin-bottom:12px; flex-wrap:wrap;">
+          <button type="button" class="btn-primary" id="openAddAccBtn" style="flex:1;">+ Запись</button>
+          <button type="button" class="btn-secondary" id="selectAllAccBtn">${allSelected ? "Снять все" : "Выделить все"}</button>
+          <button type="button" class="btn-primary" id="calcCloseCashBtn">Рассчитать</button>
+        </div>
+
+        ${feedItems.length === 0 ? `
+          <div class="empty-state" style="margin-bottom:14px;">
+            <div class="empty-state-title">Записей бухгалтерии пока нет</div>
+            <div class="empty-state-sub">Нажмите «+ Запись», чтобы добавить первую встречу.</div>
+          </div>
+        ` : `
+          <div class="card-list" style="margin-bottom:16px;">
+            ${feedItems.map((node) => {
+              if (node.kind === "closing") {
+                const cl = node.item;
+                return `
+                  <div class="card">
+                    <div class="card-top">
+                      <div class="card-sub" style="margin:0; white-space:pre-line; color:var(--text); font-weight:600;">${escapeHtml(buildDailyClosingText(cl))}</div>
+                      <div class="card-actions">
+                        <button type="button" class="mini-btn copy-closing-btn" data-id="${escapeHtml(cl.id)}">Копировать</button>
+                        <button type="button" class="mini-btn danger del-closing-btn" data-id="${escapeHtml(cl.id)}">✕</button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+
+              const item = node.item;
+              const isChecked = selectedAccIds.has(item.id);
+              return `
+                <div class="card">
+                  <div class="card-top">
+                    <label style="display:flex; align-items:flex-start; gap:10px; flex:1; cursor:pointer;">
+                      <input type="checkbox" class="acc-select-cb" data-id="${escapeHtml(item.id)}" ${isChecked ? "checked" : ""} style="margin-top:4px; width:17px; height:17px;" />
+                      <div>
+                        <div class="card-title">${escapeHtml(item.model || "Без модели")}${item.date ? ` · ${escapeHtml(item.date)}` : ""}</div>
+                        <div class="card-sub">${escapeHtml(formatAccountingEntryText(item))}</div>
+                      </div>
+                    </label>
+                    <div class="card-actions">
+                      <button type="button" class="mini-btn copy-acc-btn" data-id="${escapeHtml(item.id)}">Копировать</button>
+                      <button type="button" class="mini-btn danger del-acc-btn" data-id="${escapeHtml(item.id)}">✕</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `}
+      `;
+
+      document.getElementById("openAddAccBtn").addEventListener("click", () => {
+        openAddAccountingSheet(() => renderAccountingSubTab(container));
+      });
+
+      document.getElementById("selectAllAccBtn").addEventListener("click", () => {
+        if (allSelected) {
+          selectedAccIds.clear();
+        } else {
+          selectedAccIds = new Set(entries.map((item) => item.id));
+        }
+        renderAccountingSubTab(container);
+      });
+
+      document.getElementById("calcCloseCashBtn").addEventListener("click", () => {
+        openCloseCashSheet(() => renderAccountingSubTab(container));
+      });
+
+      container.querySelectorAll(".acc-select-cb").forEach((cb) => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            selectedAccIds.add(cb.dataset.id);
+          } else {
+            selectedAccIds.delete(cb.dataset.id);
+          }
+          renderAccountingSubTab(container);
+        });
+      });
+
+      container.querySelectorAll(".copy-acc-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const item = entries.find((x) => x.id === btn.dataset.id);
+          if (item) copyText(formatAccountingEntryText(item));
+        });
+      });
+
+      container.querySelectorAll(".del-acc-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedAccIds.delete(btn.dataset.id);
+          state.acc = entries.filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderAccountingSubTab(container);
+          showToast("Запись удалена");
+        });
+      });
+
+      container.querySelectorAll(".copy-closing-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const cl = closings.find((x) => x.id === btn.dataset.id);
+          if (cl) copyText(buildDailyClosingText(cl));
+        });
+      });
+
+      container.querySelectorAll(".del-closing-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.closings = closings.filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderAccountingSubTab(container);
+          showToast("Закрытие удалено");
+        });
+      });
+    }
+
+    function renderShiftsSubTab(container) {
+      const shifts = Array.isArray(state.shifts) ? state.shifts : [];
+      const weeklyReports = Array.isArray(state.weeklyReports) ? state.weeklyReports : [];
+      const allSelected = shifts.length > 0 && shifts.every((s) => selectedShiftIds.has(s.id));
+
+      // `shifts` is ordered newest-first (index 0 is newest, shifts.length - 1 is oldest).
+      // Each weekly report stores `count` = how many shift reports existed when that weekly report was created.
+      // Placing each weekly report below newer shift reports added after it and above older shift reports
+      // creates the repeating cycle: [new shifts] -> [latest weekly report] -> [earlier shifts] -> [older weekly report].
+      const chronologicalWeekly = [...weeklyReports].reverse();
+      const feedItems = [];
+      let shiftCursor = 0;
+
+      for (let i = chronologicalWeekly.length - 1; i >= 0; i -= 1) {
+        const wk = chronologicalWeekly[i];
+        const snapshotCount = Math.max(0, Math.min(shifts.length, Number(wk.count ?? shifts.length)));
+        const newerShiftsCount = Math.max(0, shifts.length - snapshotCount);
+
+        while (shiftCursor < newerShiftsCount && shiftCursor < shifts.length) {
+          feedItems.push({ kind: "shift", item: shifts[shiftCursor] });
+          shiftCursor += 1;
+        }
+        feedItems.push({ kind: "weekly", item: wk });
+      }
+
+      while (shiftCursor < shifts.length) {
+        feedItems.push({ kind: "shift", item: shifts[shiftCursor] });
+        shiftCursor += 1;
+      }
+
+      container.innerHTML = `
+        <div class="card-actions" style="margin-bottom:12px; flex-wrap:wrap;">
+          <button type="button" class="btn-primary" id="openAddShiftBtn" style="flex:1;">+ Отчёт смены</button>
+          <button type="button" class="btn-secondary" id="selectAllShiftsBtn">${allSelected ? "Снять все" : "Выделить все"}</button>
+          <button type="button" class="btn-primary" id="calcWeeklyBtn">Рассчитать неделю</button>
+        </div>
+
+        ${feedItems.length === 0 ? `
+          <div class="empty-state" style="margin-bottom:14px;">
+            <div class="empty-state-title">Отчётов смен пока нет</div>
+            <div class="empty-state-sub">Нажмите «+ Отчёт смены», чтобы сформировать отчёт по смене.</div>
+          </div>
+        ` : `
+          <div class="card-list" style="margin-bottom:16px;">
+            ${feedItems.map((node) => {
+              if (node.kind === "weekly") {
+                const wk = node.item;
+                return `
+                  <div class="card">
+                    <div class="card-top">
+                      <div class="card-sub" style="margin:0; white-space:pre-line; color:var(--text); font-weight:600;">${escapeHtml(buildWeeklyReportText(wk))}</div>
+                      <div class="card-actions">
+                        <button type="button" class="mini-btn copy-weekly-btn" data-id="${escapeHtml(wk.id)}">Копировать</button>
+                        <button type="button" class="mini-btn danger del-weekly-btn" data-id="${escapeHtml(wk.id)}">✕</button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+
+              const rep = node.item;
+              const isChecked = selectedShiftIds.has(rep.id);
+              return `
+                <div class="card">
+                  <div class="card-top">
+                    <label style="display:flex; align-items:flex-start; gap:10px; flex:1; cursor:pointer;">
+                      <input type="checkbox" class="shift-select-cb" data-id="${escapeHtml(rep.id)}" ${isChecked ? "checked" : ""} style="margin-top:4px; width:17px; height:17px;" />
+                      <div>
+                        <div class="card-title">${escapeHtml(rep.date || "Отчёт")}${rep.operator ? ` · ${escapeHtml(rep.operator)}` : ""}</div>
+                        <div class="card-sub" style="white-space:pre-line;">${escapeHtml(buildShiftReportText(rep))}</div>
+                      </div>
+                    </label>
+                    <div class="card-actions">
+                      <button type="button" class="mini-btn copy-shift-btn" data-id="${escapeHtml(rep.id)}">Копировать</button>
+                      <button type="button" class="mini-btn danger del-shift-btn" data-id="${escapeHtml(rep.id)}">✕</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `}
+      `;
+
+      document.getElementById("openAddShiftBtn").addEventListener("click", () => {
+        openAddShiftReportSheet(() => renderShiftsSubTab(container));
+      });
+
+      document.getElementById("selectAllShiftsBtn").addEventListener("click", () => {
+        if (allSelected) {
+          selectedShiftIds.clear();
+        } else {
+          selectedShiftIds = new Set(shifts.map((s) => s.id));
+        }
+        renderShiftsSubTab(container);
+      });
+
+      document.getElementById("calcWeeklyBtn").addEventListener("click", () => {
+        openWeeklyReportSheet(() => renderShiftsSubTab(container));
+      });
+
+      container.querySelectorAll(".shift-select-cb").forEach((cb) => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            selectedShiftIds.add(cb.dataset.id);
+          } else {
+            selectedShiftIds.delete(cb.dataset.id);
+          }
+          renderShiftsSubTab(container);
+        });
+      });
+
+      container.querySelectorAll(".copy-shift-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const rep = shifts.find((x) => x.id === btn.dataset.id);
+          if (rep) copyText(buildShiftReportText(rep));
+        });
+      });
+
+      container.querySelectorAll(".del-shift-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedShiftIds.delete(btn.dataset.id);
+          state.shifts = shifts.filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderShiftsSubTab(container);
+          showToast("Отчёт смены удалён");
+        });
+      });
+
+      container.querySelectorAll(".copy-weekly-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const wk = weeklyReports.find((x) => x.id === btn.dataset.id);
+          if (wk) copyText(buildWeeklyReportText(wk));
+        });
+      });
+
+      container.querySelectorAll(".del-weekly-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.weeklyReports = weeklyReports.filter((x) => x.id !== btn.dataset.id);
+          saveState();
+          renderShiftsSubTab(container);
+          showToast("Недельный отчёт удалён");
+        });
+      });
+    }
+
+    function renderOpsTab(container) {
+      container.innerHTML = `
+        <div class="section-header">
+          <div class="section-title">Касса и отчёты</div>
+        </div>
+        <div class="segmented">
+          <button type="button" class="seg-btn ${opsSubTab === "acc" ? "active" : ""}" data-opssub="acc">Бухгалтерия</button>
+          <button type="button" class="seg-btn ${opsSubTab === "shifts" ? "active" : ""}" data-opssub="shifts">Отчёты смен</button>
+        </div>
+        <div id="opsSubContent"></div>
+      `;
+
+      container.querySelectorAll("[data-opssub]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          opsSubTab = btn.dataset.opssub || "acc";
+          renderOpsTab(container);
+        });
+      });
+
+      const subContent = document.getElementById("opsSubContent");
+      if (!subContent) return;
+
+      if (opsSubTab === "shifts") {
+        renderShiftsSubTab(subContent);
+      } else {
+        renderAccountingSubTab(subContent);
+      }
+    }
+
+    function renderMain() {
+      const mainView = document.getElementById("mainView");
+      if (!mainView) return;
+
+      document.querySelectorAll("#bottomNav .nav-item").forEach((navBtn) => {
+        navBtn.classList.toggle("active", navBtn.dataset.tab === activeTab);
+      });
+
+      if (activeTab === "bl") {
+        renderBlacklistTab(mainView);
+      } else if (activeTab === "models") {
+        renderModelsTab(mainView);
+      } else if (activeTab === "team") {
+        renderTeamTab(mainView);
+      } else if (activeTab === "info") {
+        renderInfoTab(mainView);
+      } else if (activeTab === "ops") {
+        renderOpsTab(mainView);
+      }
+    }
+
+    function initApp() {
+      document.querySelectorAll("#bottomNav .nav-item").forEach((navBtn) => {
+        navBtn.addEventListener("click", () => {
+          activeTab = navBtn.dataset.tab || "bl";
+          renderMain();
+        });
+      });
+
+      const sideEdgeBtn = document.getElementById("sidePaymentEdgeBtn");
+      if (sideEdgeBtn) {
+        sideEdgeBtn.addEventListener("click", () => openSidePaymentDrawer(false));
+      }
+
+      const sideOtcBtn = document.getElementById("sideOtcEdgeBtn");
+      if (sideOtcBtn) {
+        sideOtcBtn.addEventListener("click", () => openSideOtcDrawer(false));
+      }
+
+      const sideDrawer = document.getElementById("sidePaymentDrawer");
+      if (sideDrawer) {
+        sideDrawer.addEventListener("click", (e) => {
+          if (e.target === sideDrawer) {
+            closeSidePaymentDrawer();
+          }
+        });
+      }
+
+      const sideOtcDrawer = document.getElementById("sideOtcDrawer");
+      if (sideOtcDrawer) {
+        sideOtcDrawer.addEventListener("click", (e) => {
+          if (e.target === sideOtcDrawer) {
+            closeSideOtcDrawer();
+          }
+        });
+      }
+
+      const backdrop = document.getElementById("sheetBackdrop");
+      if (backdrop) {
+        backdrop.addEventListener("click", (e) => {
+          if (e.target === backdrop) {
+            closeSheet();
+          }
+        });
+      }
+
+      renderMain();
+      void initSharedGroupSync();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
