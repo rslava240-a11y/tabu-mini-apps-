@@ -692,6 +692,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      text-decoration: none;
     }
 
     .photo-action-btn.del {
@@ -996,6 +997,8 @@
     }
 
     const STORE_KEY = "miniapp_tabu_v1";
+    const PHOTO_DB_NAME = "tabu_photos_db_v1";
+    const PHOTO_STORE_NAME = "photos";
     const VIDEO_DB_NAME = "tabu_media_db_v1";
     const VIDEO_STORE_NAME = "videos";
 
@@ -1453,6 +1456,148 @@
     };
 
     const BASE_MODEL_CITIES = ["Тбилиси"];
+    const photoUrlCache = new Map();
+
+    let photoDbPromise = null;
+    function openPhotoDb() {
+      if (photoDbPromise) return photoDbPromise;
+      photoDbPromise = new Promise((resolve) => {
+        if (!("indexedDB" in window)) {
+          resolve(null);
+          return;
+        }
+        try {
+          const req = indexedDB.open(PHOTO_DB_NAME, 1);
+          req.onupgradeneeded = () => {
+            const dbInstance = req.result;
+            if (!dbInstance.objectStoreNames.contains(PHOTO_STORE_NAME)) {
+              dbInstance.createObjectStore(PHOTO_STORE_NAME, { keyPath: "id" });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        } catch (err) {
+          resolve(null);
+        }
+      });
+      return photoDbPromise;
+    }
+
+    async function savePhotoDataToDb(photoId, dataUrl, name = "photo.jpg") {
+      if (!photoId || !dataUrl) return false;
+      const idb = await openPhotoDb();
+      if (!idb) return false;
+      return new Promise((resolve) => {
+        try {
+          const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
+          tx.objectStore(PHOTO_STORE_NAME).put({
+            id: photoId,
+            dataUrl,
+            name,
+            savedAt: Date.now()
+          });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+
+    async function getPhotoRecordFromDb(photoId) {
+      if (!photoId) return null;
+      const idb = await openPhotoDb();
+      if (!idb) return null;
+      return new Promise((resolve) => {
+        try {
+          const tx = idb.transaction(PHOTO_STORE_NAME, "readonly");
+          const req = tx.objectStore(PHOTO_STORE_NAME).get(photoId);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    async function deletePhotoFromDb(photoId) {
+      if (!photoId) return;
+      photoUrlCache.delete(photoId);
+      const idb = await openPhotoDb();
+      if (!idb) return;
+      try {
+        const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
+        tx.objectStore(PHOTO_STORE_NAME).delete(photoId);
+      } catch (e) {}
+    }
+
+    function normalizePhotoEntry(entry, idx = 0) {
+      if (!entry) return null;
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        if (!trimmed) return null;
+        return {
+          photoId: "",
+          src: trimmed,
+          name: `photo_${idx + 1}.jpg`
+        };
+      }
+      if (typeof entry === "object") {
+        const photoId = String(entry.photoId || "").trim();
+        const cached = photoId ? photoUrlCache.get(photoId) : "";
+        const src = String(entry.src || cached || "").trim();
+        if (!photoId && !src) return null;
+        return {
+          photoId,
+          src,
+          name: String(entry.name || `photo_${idx + 1}.jpg`)
+        };
+      }
+      return null;
+    }
+
+    function getPhotoDisplaySrc(entry) {
+      if (!entry) return "";
+      if (typeof entry === "string") return entry;
+      if (entry.src) return entry.src;
+      if (entry.photoId && photoUrlCache.has(entry.photoId)) {
+        return photoUrlCache.get(entry.photoId);
+      }
+      return "";
+    }
+
+    async function hydrateStoredPhotos(modelsList) {
+      if (!Array.isArray(modelsList) || !modelsList.length) return;
+      let changed = false;
+      for (const m of modelsList) {
+        if (!m) continue;
+        for (const field of ["photos", "routePhotos"]) {
+          const arr = Array.isArray(m[field]) ? m[field] : [];
+          for (let i = 0; i < arr.length; i += 1) {
+            const norm = normalizePhotoEntry(arr[i], i);
+            if (!norm) continue;
+            if (norm.src && norm.src.startsWith("data:image/") && norm.photoId) {
+              photoUrlCache.set(norm.photoId, norm.src);
+              await savePhotoDataToDb(norm.photoId, norm.src, norm.name);
+            } else if (norm.photoId && !norm.src) {
+              const rec = await getPhotoRecordFromDb(norm.photoId);
+              if (rec && rec.dataUrl) {
+                photoUrlCache.set(norm.photoId, rec.dataUrl);
+                if (typeof arr[i] === "object" && arr[i] !== null) {
+                  arr[i].src = rec.dataUrl;
+                } else {
+                  arr[i] = { photoId: norm.photoId, src: rec.dataUrl, name: norm.name };
+                }
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+      if (changed) {
+        renderMain();
+      }
+    }
 
     let videoDbPromise = null;
     function openVideoDb() {
@@ -1583,11 +1728,17 @@
           if (!m || typeof m !== "object") return null;
           const city = normalizeModelCity(m.city, allowedCities);
           if (!city) return null;
+          const cleanPhotos = (Array.isArray(m.photos) ? m.photos : [])
+            .map((p, idx) => normalizePhotoEntry(p, idx))
+            .filter(Boolean);
+          const cleanRoutePhotos = (Array.isArray(m.routePhotos) ? m.routePhotos : [])
+            .map((p, idx) => normalizePhotoEntry(p, idx))
+            .filter(Boolean);
           return {
             ...m,
             city,
-            photos: Array.isArray(m.photos) ? m.photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [],
-            routePhotos: Array.isArray(m.routePhotos) ? m.routePhotos.filter((p) => typeof p === "string" && p.trim().length > 0) : [],
+            photos: cleanPhotos,
+            routePhotos: cleanRoutePhotos,
             videos: Array.isArray(m.videos) ? m.videos : [],
             routeVideos: Array.isArray(m.routeVideos) ? m.routeVideos : [],
             description: typeof m.description === "string" ? m.description : ""
@@ -1623,20 +1774,32 @@
       return lines.join("\n");
     }
 
-    function compressImageFiles(fileList, maxSize = 640, quality = 0.62) {
+    function compressImageFiles(fileList, maxSize = 680, quality = 0.64) {
       const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("image/"));
       if (!files.length) return Promise.resolve([]);
 
-      const readSingleFile = (file) => new Promise((resolve) => {
+      const readSingleFile = (file, fileIdx) => new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const rawDataUrl = String(ev.target?.result || "");
           if (!rawDataUrl) {
-            resolve("");
+            resolve(null);
             return;
           }
+          const finalizePhoto = async (finalDataUrl) => {
+            if (!finalDataUrl) return null;
+            const photoId = `ph_${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
+            photoUrlCache.set(photoId, finalDataUrl);
+            await savePhotoDataToDb(photoId, finalDataUrl, file.name || `photo_${fileIdx + 1}.jpg`);
+            return {
+              photoId,
+              src: finalDataUrl,
+              name: file.name || `photo_${fileIdx + 1}.jpg`
+            };
+          };
+
           const img = new Image();
-          img.onload = () => {
+          img.onload = async () => {
             try {
               let { width, height } = img;
               if (width > maxSize || height > maxSize) {
@@ -1653,7 +1816,7 @@
               canvas.height = Math.max(1, height);
               const ctx = canvas.getContext("2d");
               if (!ctx) {
-                resolve(rawDataUrl);
+                resolve(await finalizePhoto(rawDataUrl));
                 return;
               }
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -1662,29 +1825,35 @@
               let w = canvas.width;
               let h = canvas.height;
               let guard = 0;
-              while (dataUrl.length > 135000 && guard < 5) {
+              while (dataUrl.length > 95000 && guard < 6) {
                 guard += 1;
-                w = Math.max(220, Math.round(w * 0.76));
-                h = Math.max(220, Math.round(h * 0.76));
-                q = Math.max(0.42, q - 0.08);
+                w = Math.max(240, Math.round(w * 0.75));
+                h = Math.max(240, Math.round(h * 0.75));
+                q = Math.max(0.4, q - 0.08);
                 canvas.width = w;
                 canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
                 dataUrl = canvas.toDataURL("image/jpeg", q);
               }
-              resolve(dataUrl);
+              resolve(await finalizePhoto(dataUrl));
             } catch (err) {
-              resolve(rawDataUrl);
+              resolve(await finalizePhoto(rawDataUrl));
             }
           };
-          img.onerror = () => resolve(rawDataUrl.startsWith("data:image/") ? rawDataUrl : "");
+          img.onerror = async () => {
+            if (rawDataUrl.startsWith("data:image/")) {
+              resolve(await finalizePhoto(rawDataUrl));
+            } else {
+              resolve(null);
+            }
+          };
           img.src = rawDataUrl;
         };
-        reader.onerror = () => resolve("");
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
       });
 
-      return Promise.all(files.map(readSingleFile)).then((items) => items.filter(Boolean));
+      return Promise.all(files.map((f, idx) => readSingleFile(f, idx))).then((items) => items.filter(Boolean));
     }
 
     async function readVideoFiles(fileList) {
@@ -1742,17 +1911,38 @@
       return new Blob([arr], { type: mime });
     }
 
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "") || Boolean(tg && tg.platform && tg.platform !== "unknown" && tg.platform !== "tdesktop" && tg.platform !== "web");
+    }
+
     async function triggerMediaDownload(itemOrSrc, filename = "file.jpg") {
-      const mediaObj = typeof itemOrSrc === "object" && itemOrSrc !== null
-        ? itemOrSrc
-        : { src: itemOrSrc, mediaId: "", name: filename };
+      const normPhoto = normalizePhotoEntry(itemOrSrc, 0);
+      const mediaObj = normPhoto
+        ? { src: getPhotoDisplaySrc(normPhoto), mediaId: "", photoId: normPhoto.photoId, name: normPhoto.name || filename }
+        : (typeof itemOrSrc === "object" && itemOrSrc !== null
+          ? itemOrSrc
+          : { src: itemOrSrc, mediaId: "", name: filename });
+
       let src = String(mediaObj.src || "");
+      if (!src && mediaObj.photoId) {
+        const recPhoto = await getPhotoRecordFromDb(mediaObj.photoId);
+        if (recPhoto && recPhoto.dataUrl) {
+          src = recPhoto.dataUrl;
+        }
+      }
       const outName = mediaObj.name || filename;
 
       if (mediaObj.mediaId) {
         const rec = await getVideoRecordFromDb(mediaObj.mediaId);
         if (rec && rec.blob instanceof Blob) {
           const idbUrl = URL.createObjectURL(rec.blob);
+          if (tg && typeof tg.openLink === "function" && isMobileDevice()) {
+            try {
+              tg.openLink(idbUrl);
+              showToast("Открыто для сохранения");
+              return;
+            } catch (e) {}
+          }
           const a = document.createElement("a");
           a.href = idbUrl;
           a.download = rec.name || outName;
@@ -1774,32 +1964,62 @@
       }
 
       try {
-        let href = src;
-        let tempUrl = "";
         if (src.startsWith("data:")) {
           const blob = dataUrlToBlob(src);
-          tempUrl = URL.createObjectURL(blob);
-          href = tempUrl;
+          const blobUrl = URL.createObjectURL(blob);
+
+          if (isMobileDevice() && navigator.share && typeof File === "function") {
+            try {
+              const fileObj = new File([blob], outName, { type: blob.type || "image/jpeg" });
+              if (!navigator.canShare || navigator.canShare({ files: [fileObj] })) {
+                await navigator.share({ files: [fileObj], title: outName });
+                setTimeout(() => {
+                  try { URL.revokeObjectURL(blobUrl); } catch (e) {}
+                }, 3000);
+                showToast("Сохранение фото");
+                return;
+              }
+            } catch (shareErr) {
+              if (shareErr && shareErr.name === "AbortError") {
+                try { URL.revokeObjectURL(blobUrl); } catch (e) {}
+                return;
+              }
+            }
+          }
+
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = outName;
+          link.rel = "noopener noreferrer";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          setTimeout(() => {
+            try { URL.revokeObjectURL(blobUrl); } catch (e) {}
+          }, 5000);
+          showToast("Скачивание запущено");
+          return;
         }
+
         const link = document.createElement("a");
-        link.href = href;
+        link.href = src;
         link.download = outName;
+        link.target = "_blank";
         link.rel = "noopener noreferrer";
-        if (!src.startsWith("data:") && !src.startsWith("blob:")) {
-          link.target = "_blank";
-        }
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        if (tempUrl) {
-          setTimeout(() => {
-            try { URL.revokeObjectURL(tempUrl); } catch (e) {}
-          }, 4000);
-        }
         showToast("Скачивание запущено");
       } catch (e) {
         try {
-          window.open(src, "_blank", "noopener,noreferrer");
+          const newWin = window.open(src, "_blank", "noopener,noreferrer");
+          if (!newWin && src.startsWith("data:")) {
+            const w = window.open("");
+            if (w) {
+              w.document.write(`<img src="${src}" style="max-width:100%;height:auto;" />`);
+            }
+          }
           showToast("Открыто для сохранения");
         } catch (err2) {
           showToast("Не удалось скачать файл");
@@ -1808,7 +2028,10 @@
     }
 
     function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix }) {
-      const list = Array.isArray(photos) ? photos : [];
+      const list = (Array.isArray(photos) ? photos : [])
+        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .filter(Boolean);
+
       return `
         <div class="detail-block">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
@@ -1820,15 +2043,18 @@
             <div class="card-sub" style="margin:0;">Фотографии ещё не добавлены</div>
           ` : `
             <div class="photo-grid">
-              ${list.map((src, idx) => `
-                <div class="photo-tile">
-                  <img src="${escapeHtml(src)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.style.display='none'" />
-                  <div class="photo-tile-overlay">
-                    <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}" data-prefix="${escapeHtml(downloadPrefix)}">⬇ Скачать</button>
-                    <button type="button" class="photo-action-btn del rm-photo-btn" data-idx="${idx}">✕</button>
+              ${list.map((pItem, idx) => {
+                const imgSrc = getPhotoDisplaySrc(pItem);
+                return `
+                  <div class="photo-tile">
+                    <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.style.display='none'" />
+                    <div class="photo-tile-overlay">
+                      <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}" data-prefix="${escapeHtml(downloadPrefix)}">⬇ Скачать</button>
+                      <button type="button" class="photo-action-btn del rm-photo-btn" data-idx="${idx}">✕</button>
+                    </div>
                   </div>
-                </div>
-              `).join("")}
+                `;
+              }).join("")}
             </div>
           `}
         </div>
@@ -1852,12 +2078,18 @@
         });
       }
 
+      const normalized = (Array.isArray(photos) ? photos : [])
+        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .filter(Boolean);
+
       rootEl.querySelectorAll(".dl-photo-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           const idx = Number(btn.dataset.idx);
-          const src = photos[idx];
-          void triggerMediaDownload(src, `${downloadPrefix}_${idx + 1}.jpg`);
+          const pItem = normalized[idx];
+          if (pItem) {
+            void triggerMediaDownload(pItem, pItem.name || `${downloadPrefix}_${idx + 1}.jpg`);
+          }
         });
       });
 
@@ -1865,6 +2097,10 @@
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           const idx = Number(btn.dataset.idx);
+          const pItem = normalized[idx];
+          if (pItem && pItem.photoId) {
+            void deletePhotoFromDb(pItem.photoId);
+          }
           onRemovePhoto(idx);
         });
       });
@@ -2405,17 +2641,36 @@
       }
     }
 
-    function buildSyncableState(srcState) {
+    function serializePhotoForStorage(p, idx = 0, includeImageData = true) {
+      const norm = normalizePhotoEntry(p, idx);
+      if (!norm) return null;
+      const srcVal = getPhotoDisplaySrc(norm);
+      if (norm.photoId && srcVal.startsWith("data:image/")) {
+        photoUrlCache.set(norm.photoId, srcVal);
+        void savePhotoDataToDb(norm.photoId, srcVal, norm.name);
+      }
+      return {
+        photoId: norm.photoId || `ph_legacy_${idx}`,
+        name: norm.name || `photo_${idx + 1}.jpg`,
+        src: includeImageData && srcVal && srcVal.length < 180000 ? srcVal : ""
+      };
+    }
+
+    function buildSyncableState(srcState, { includePhotos = true } = {}) {
       return {
         ...srcState,
         models: Array.isArray(srcState.models)
           ? srcState.models.map((m) => ({
               ...m,
               photos: Array.isArray(m.photos)
-                ? m.photos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 220000)
+                ? m.photos
+                    .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos))
+                    .filter(Boolean)
                 : [],
               routePhotos: Array.isArray(m.routePhotos)
-                ? m.routePhotos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 220000)
+                ? m.routePhotos
+                    .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos))
+                    .filter(Boolean)
                 : [],
               videos: Array.isArray(m.videos)
                 ? m.videos.map((v) => {
@@ -2446,20 +2701,13 @@
       if (!isApplyingRemoteSnapshot) {
         lastLocalMutationAt = Date.now();
       }
-      const syncable = buildSyncableState(state);
+      const syncable = buildSyncableState(state, { includePhotos: true });
       try {
         localStorage.setItem(STORE_KEY, JSON.stringify(syncable));
       } catch (e) {
         try {
-          const compactState = {
-            ...syncable,
-            models: (syncable.models || []).map((m) => ({
-              ...m,
-              photos: (m.photos || []).slice(0, 4),
-              routePhotos: (m.routePhotos || []).slice(0, 3)
-            }))
-          };
-          localStorage.setItem(STORE_KEY, JSON.stringify(compactState));
+          const lightLocalState = buildSyncableState(state, { includePhotos: false });
+          localStorage.setItem(STORE_KEY, JSON.stringify(lightLocalState));
         } catch (e2) {
           showToast("Недостаточно места в локальном хранилище");
         }
@@ -2472,19 +2720,10 @@
     async function pushStateToCloud(snapshotState) {
       if (!db || !currentUser || !sharedDocRef || isApplyingRemoteSnapshot) return;
       try {
-        let payloadToSend = buildSyncableState(snapshotState);
+        let payloadToSend = buildSyncableState(snapshotState, { includePhotos: true });
         let serialized = JSON.stringify(payloadToSend);
-        let maxPhotosPerModel = 10;
-        while (serialized.length > 820000 && maxPhotosPerModel > 2) {
-          maxPhotosPerModel -= 2;
-          payloadToSend = {
-            ...payloadToSend,
-            models: (payloadToSend.models || []).map((m) => ({
-              ...m,
-              photos: (m.photos || []).slice(0, maxPhotosPerModel),
-              routePhotos: (m.routePhotos || []).slice(0, Math.max(2, Math.floor(maxPhotosPerModel / 2)))
-            }))
-          };
+        if (serialized.length > 820000) {
+          payloadToSend = buildSyncableState(snapshotState, { includePhotos: false });
           serialized = JSON.stringify(payloadToSend);
         }
         await setDoc(sharedDocRef, {
@@ -2497,6 +2736,48 @@
         console.error("Shared sync write failed:", err);
         setSyncStatus("Синхронизация: ошибка отправки (сохранено локально)");
       }
+    }
+
+    function mergePhotosPreservingLocal(remoteList, localList) {
+      const remArr = (Array.isArray(remoteList) ? remoteList : [])
+        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .filter(Boolean);
+      const locArr = (Array.isArray(localList) ? localList : [])
+        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .filter(Boolean);
+
+      const localById = new Map();
+      locArr.forEach((lp) => {
+        if (lp.photoId) localById.set(lp.photoId, lp);
+      });
+
+      const merged = remArr.map((rp) => {
+        const cachedSrc = rp.photoId ? photoUrlCache.get(rp.photoId) : "";
+        const localMatch = rp.photoId ? localById.get(rp.photoId) : null;
+        const bestSrc = rp.src || cachedSrc || (localMatch ? localMatch.src : "");
+        if (rp.photoId && bestSrc && bestSrc.startsWith("data:image/")) {
+          photoUrlCache.set(rp.photoId, bestSrc);
+          void savePhotoDataToDb(rp.photoId, bestSrc, rp.name);
+        }
+        return {
+          photoId: rp.photoId || (localMatch ? localMatch.photoId : ""),
+          src: bestSrc,
+          name: rp.name || (localMatch ? localMatch.name : "photo.jpg")
+        };
+      });
+
+      if (merged.length === 0 && locArr.length > 0) {
+        return locArr;
+      }
+
+      const mergedIds = new Set(merged.map((m) => m.photoId).filter(Boolean));
+      locArr.forEach((lp) => {
+        if (!lp.photoId || !mergedIds.has(lp.photoId)) {
+          merged.push(lp);
+        }
+      });
+
+      return merged;
     }
 
     async function initSharedGroupSync() {
@@ -2536,7 +2817,7 @@
 
         const existingSnap = await getDoc(sharedDocRef);
         if (!existingSnap.exists()) {
-          await pushStateToCloud(buildSyncableState(state));
+          await pushStateToCloud(buildSyncableState(state, { includePhotos: true }));
         }
 
         onSnapshot(
@@ -2588,40 +2869,43 @@
               weeklyReports: Array.isArray(parsedRemote.weeklyReports) ? parsedRemote.weeklyReports : []
             };
 
-            const remoteSerialized = JSON.stringify(normalizedRemote);
-            const currentSerialized = JSON.stringify(buildSyncableState(state));
+            const localModelsById = new Map();
+            (state.models || []).forEach((lm) => {
+              if (lm && lm.id) {
+                localModelsById.set(lm.id, lm);
+              }
+            });
+
+            normalizedRemote.models = (normalizedRemote.models || []).map((rm) => {
+              const localM = localModelsById.get(rm.id);
+              if (!localM) return rm;
+              return {
+                ...rm,
+                photos: mergePhotosPreservingLocal(rm.photos, localM.photos),
+                routePhotos: mergePhotosPreservingLocal(rm.routePhotos, localM.routePhotos),
+                videos: (Array.isArray(rm.videos) && rm.videos.some((v) => v && v.src)) ? rm.videos : (Array.isArray(localM.videos) ? localM.videos : []),
+                routeVideos: (Array.isArray(rm.routeVideos) && rm.routeVideos.some((v) => v && v.src)) ? rm.routeVideos : (Array.isArray(localM.routeVideos) ? localM.routeVideos : [])
+              };
+            });
+
+            const remoteSerialized = JSON.stringify(buildSyncableState(normalizedRemote, { includePhotos: false }));
+            const currentSerialized = JSON.stringify(buildSyncableState(state, { includePhotos: false }));
 
             if (remoteSerialized !== currentSerialized) {
               isApplyingRemoteSnapshot = true;
               try {
-                const localVideosByModelId = new Map();
-                (state.models || []).forEach((lm) => {
-                  if (lm && lm.id) {
-                    localVideosByModelId.set(lm.id, {
-                      videos: Array.isArray(lm.videos) ? lm.videos : [],
-                      routeVideos: Array.isArray(lm.routeVideos) ? lm.routeVideos : []
-                    });
-                  }
-                });
-                normalizedRemote.models = (normalizedRemote.models || []).map((rm) => {
-                  const localV = localVideosByModelId.get(rm.id);
-                  if (!localV) return rm;
-                  return {
-                    ...rm,
-                    videos: (Array.isArray(rm.videos) && rm.videos.some((v) => v && v.src)) ? rm.videos : localV.videos,
-                    routeVideos: (Array.isArray(rm.routeVideos) && rm.routeVideos.some((v) => v && v.src)) ? rm.routeVideos : localV.routeVideos
-                  };
-                });
-
                 state = normalizedRemote;
+                void hydrateStoredPhotos(state.models);
                 void hydrateStoredVideos(state.models);
                 try {
-                  localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state)));
+                  localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: false })));
                 } catch (lsErr) {}
                 renderMain();
               } finally {
                 isApplyingRemoteSnapshot = false;
               }
+            } else {
+              void hydrateStoredPhotos(normalizedRemote.models);
             }
             setSyncStatus("Синхронизация: общая база онлайн");
           },
@@ -3072,7 +3356,7 @@
               const routePhotos = Array.isArray(m.routePhotos) ? m.routePhotos : [];
               const videos = Array.isArray(m.videos) ? m.videos : [];
               const routeVideos = Array.isArray(m.routeVideos) ? m.routeVideos : [];
-              const coverPhoto = photos[0] || "";
+              const coverPhoto = photos.length > 0 ? getPhotoDisplaySrc(photos[0]) : "";
               return `
                 <div class="card clickable open-model-card" data-id="${escapeHtml(m.id)}">
                   <div class="model-card-header-row">
@@ -3384,6 +3668,10 @@
           e.stopPropagation();
           const target = (state.models || []).find((x) => x.id === btn.dataset.id);
           if (target) {
+            [...(target.photos || []), ...(target.routePhotos || [])].forEach((p) => {
+              const norm = normalizePhotoEntry(p, 0);
+              if (norm && norm.photoId) void deletePhotoFromDb(norm.photoId);
+            });
             [...(target.videos || []), ...(target.routeVideos || [])].forEach((v) => {
               if (v && v.mediaId) void deleteVideoFromDb(v.mediaId);
             });
@@ -4329,6 +4617,7 @@
       }
 
       renderMain();
+      void hydrateStoredPhotos(state.models);
       void hydrateStoredVideos(state.models);
       void initSharedGroupSync();
     }
