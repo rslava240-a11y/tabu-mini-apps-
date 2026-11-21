@@ -1002,6 +1002,22 @@
     const VIDEO_DB_NAME = "tabu_media_db_v1";
     const VIDEO_STORE_NAME = "videos";
 
+    function createMediaScopeKey(modelId, fieldName, indexOrId = "") {
+      const safeModel = String(modelId || "model").trim();
+      const safeField = String(fieldName || "media").trim();
+      const safeSuffix = String(indexOrId || "").trim();
+      return `${safeModel}__${safeField}${safeSuffix ? `__${safeSuffix}` : ""}`;
+    }
+
+    function belongsToModelScope(mediaId, modelId, fieldName) {
+      const idStr = String(mediaId || "");
+      const mId = String(modelId || "");
+      const fName = String(fieldName || "");
+      if (!idStr || !mId) return false;
+      if (idStr.startsWith(`${mId}__${fName}__`)) return true;
+      return false;
+    }
+
     const def = {
       bl: [
         { id: "bl_1", phone: "+995 568 93 94 53", reason: "ЧС (из общего списка)" },
@@ -1457,6 +1473,7 @@
 
     const BASE_MODEL_CITIES = ["Тбилиси"];
     const photoUrlCache = new Map();
+    const videoUrlCache = new Map();
 
     let photoDbPromise = null;
     function openPhotoDb() {
@@ -1531,19 +1548,27 @@
       } catch (e) {}
     }
 
-    function normalizePhotoEntry(entry, idx = 0) {
+    function normalizePhotoEntry(entry, idx = 0, modelId = "", fieldName = "photos") {
       if (!entry) return null;
       if (typeof entry === "string") {
         const trimmed = entry.trim();
         if (!trimmed) return null;
+        const scopedId = modelId
+          ? createMediaScopeKey(modelId, fieldName, `legacy_${idx}`)
+          : "";
         return {
-          photoId: "",
+          photoId: scopedId,
           src: trimmed,
           name: `photo_${idx + 1}.jpg`
         };
       }
       if (typeof entry === "object") {
-        const photoId = String(entry.photoId || "").trim();
+        let photoId = String(entry.photoId || "").trim();
+        if (modelId && fieldName && photoId && !belongsToModelScope(photoId, modelId, fieldName)) {
+          photoId = createMediaScopeKey(modelId, fieldName, `${idx}_${photoId.replace(/[^a-zA-Z0-9_-]/g, "").slice(-12)}`);
+        } else if (modelId && fieldName && !photoId) {
+          photoId = createMediaScopeKey(modelId, fieldName, `item_${idx}`);
+        }
         const cached = photoId ? photoUrlCache.get(photoId) : "";
         const src = String(entry.src || cached || "").trim();
         if (!photoId && !src) return null;
@@ -1570,11 +1595,11 @@
       if (!Array.isArray(modelsList) || !modelsList.length) return;
       let changed = false;
       for (const m of modelsList) {
-        if (!m) continue;
+        if (!m || !m.id) continue;
         for (const field of ["photos", "routePhotos"]) {
           const arr = Array.isArray(m[field]) ? m[field] : [];
           for (let i = 0; i < arr.length; i += 1) {
-            const norm = normalizePhotoEntry(arr[i], i);
+            const norm = normalizePhotoEntry(arr[i], i, m.id, field);
             if (!norm) continue;
             if (norm.src && norm.src.startsWith("data:image/") && norm.photoId) {
               photoUrlCache.set(norm.photoId, norm.src);
@@ -1584,6 +1609,7 @@
               if (rec && rec.dataUrl) {
                 photoUrlCache.set(norm.photoId, rec.dataUrl);
                 if (typeof arr[i] === "object" && arr[i] !== null) {
+                  arr[i].photoId = norm.photoId;
                   arr[i].src = rec.dataUrl;
                 } else {
                   arr[i] = { photoId: norm.photoId, src: rec.dataUrl, name: norm.name };
@@ -1663,6 +1689,11 @@
     async function deleteVideoFromDb(id) {
       const idb = await openVideoDb();
       if (!idb || !id) return;
+      const cachedUrl = videoUrlCache.get(id);
+      if (cachedUrl && cachedUrl.startsWith("blob:")) {
+        try { URL.revokeObjectURL(cachedUrl); } catch (e) {}
+      }
+      videoUrlCache.delete(id);
       try {
         const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
         tx.objectStore(VIDEO_STORE_NAME).delete(id);
@@ -1673,17 +1704,34 @@
       if (!Array.isArray(modelsList) || !modelsList.length) return;
       let changed = false;
       for (const m of modelsList) {
-        if (!m) continue;
+        if (!m || !m.id) continue;
         for (const field of ["videos", "routeVideos"]) {
           const arr = Array.isArray(m[field]) ? m[field] : [];
-          for (const item of arr) {
-            if (item && typeof item === "object" && item.mediaId) {
-              const rec = await getVideoRecordFromDb(item.mediaId);
-              if (rec && rec.blob instanceof Blob) {
-                if (!item.src || item.src.startsWith("blob:")) {
-                  item.src = URL.createObjectURL(rec.blob);
+          for (let i = 0; i < arr.length; i += 1) {
+            const norm = normalizeMediaItem(arr[i], `${field}_${i + 1}.mp4`, m.id, field);
+            if (!norm) continue;
+            if (typeof arr[i] === "object" && arr[i] !== null) {
+              arr[i].mediaId = norm.mediaId;
+            }
+            if (norm.mediaId) {
+              const cachedObjUrl = videoUrlCache.get(norm.mediaId);
+              if (cachedObjUrl) {
+                if (typeof arr[i] === "object" && arr[i] !== null && arr[i].src !== cachedObjUrl) {
+                  arr[i].src = cachedObjUrl;
                   changed = true;
                 }
+                continue;
+              }
+              const rec = await getVideoRecordFromDb(norm.mediaId);
+              if (rec && rec.blob instanceof Blob) {
+                const freshUrl = URL.createObjectURL(rec.blob);
+                videoUrlCache.set(norm.mediaId, freshUrl);
+                if (typeof arr[i] === "object" && arr[i] !== null) {
+                  arr[i].src = freshUrl;
+                } else {
+                  arr[i] = { mediaId: norm.mediaId, src: freshUrl, name: norm.name };
+                }
+                changed = true;
               }
             }
           }
@@ -1724,23 +1772,31 @@
     function sanitizeModelsList(list, allowedCities = BASE_MODEL_CITIES) {
       if (!Array.isArray(list)) return [];
       return list
-        .map((m) => {
+        .map((m, mIdx) => {
           if (!m || typeof m !== "object") return null;
           const city = normalizeModelCity(m.city, allowedCities);
           if (!city) return null;
+          const modelId = String(m.id || `m_sanitized_${mIdx}`).trim();
           const cleanPhotos = (Array.isArray(m.photos) ? m.photos : [])
-            .map((p, idx) => normalizePhotoEntry(p, idx))
+            .map((p, idx) => normalizePhotoEntry(p, idx, modelId, "photos"))
             .filter(Boolean);
           const cleanRoutePhotos = (Array.isArray(m.routePhotos) ? m.routePhotos : [])
-            .map((p, idx) => normalizePhotoEntry(p, idx))
+            .map((p, idx) => normalizePhotoEntry(p, idx, modelId, "routePhotos"))
+            .filter(Boolean);
+          const cleanVideos = (Array.isArray(m.videos) ? m.videos : [])
+            .map((v, idx) => normalizeMediaItem(v, `video_${idx + 1}.mp4`, modelId, "videos"))
+            .filter(Boolean);
+          const cleanRouteVideos = (Array.isArray(m.routeVideos) ? m.routeVideos : [])
+            .map((v, idx) => normalizeMediaItem(v, `route_video_${idx + 1}.mp4`, modelId, "routeVideos"))
             .filter(Boolean);
           return {
             ...m,
+            id: modelId,
             city,
             photos: cleanPhotos,
             routePhotos: cleanRoutePhotos,
-            videos: Array.isArray(m.videos) ? m.videos : [],
-            routeVideos: Array.isArray(m.routeVideos) ? m.routeVideos : [],
+            videos: cleanVideos,
+            routeVideos: cleanRouteVideos,
             description: typeof m.description === "string" ? m.description : ""
           };
         })
@@ -1773,8 +1829,7 @@
       ].filter(Boolean);
       return lines.join("\n");
     }
-
-    function compressImageFiles(fileList, maxSize = 680, quality = 0.64) {
+    function compressImageFiles(fileList, maxSize = 680, quality = 0.64, modelId = "model", fieldName = "photos") {
       const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("image/"));
       if (!files.length) return Promise.resolve([]);
 
@@ -1788,7 +1843,8 @@
           }
           const finalizePhoto = async (finalDataUrl) => {
             if (!finalDataUrl) return null;
-            const photoId = `ph_${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
+            const uniqueToken = `ph_${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
+            const photoId = createMediaScopeKey(modelId, fieldName, uniqueToken);
             photoUrlCache.set(photoId, finalDataUrl);
             await savePhotoDataToDb(photoId, finalDataUrl, file.name || `photo_${fileIdx + 1}.jpg`);
             return {
@@ -1856,17 +1912,21 @@
       return Promise.all(files.map((f, idx) => readSingleFile(f, idx))).then((items) => items.filter(Boolean));
     }
 
-    async function readVideoFiles(fileList) {
+    async function readVideoFiles(fileList, modelId = "model", fieldName = "videos") {
       const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("video/"));
       if (!files.length) return [];
 
       const results = [];
       for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
-        const mediaId = `vid_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+        const uniqueToken = `vid_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+        const mediaId = createMediaScopeKey(modelId, fieldName, uniqueToken);
         let objectUrl = "";
         try {
           objectUrl = URL.createObjectURL(file);
+          if (objectUrl) {
+            videoUrlCache.set(mediaId, objectUrl);
+          }
         } catch (err) {
           objectUrl = "";
         }
@@ -1883,15 +1943,32 @@
       return results;
     }
 
-    function normalizeMediaItem(item, fallbackName = "media") {
+    function normalizeMediaItem(item, fallbackName = "media", modelId = "", fieldName = "videos") {
       if (!item) return null;
       if (typeof item === "string") {
-        return { src: item, name: fallbackName };
+        const trimmed = item.trim();
+        if (!trimmed) return null;
+        return {
+          mediaId: modelId ? createMediaScopeKey(modelId, fieldName, "legacy_vid") : "",
+          src: trimmed,
+          name: fallbackName
+        };
       }
       if (typeof item === "object" && (item.src || item.mediaId)) {
+        let mediaId = String(item.mediaId || "").trim();
+        if (modelId && fieldName && mediaId && !belongsToModelScope(mediaId, modelId, fieldName)) {
+          mediaId = createMediaScopeKey(modelId, fieldName, `vid_${mediaId.replace(/[^a-zA-Z0-9_-]/g, "").slice(-12)}`);
+        } else if (modelId && fieldName && !mediaId) {
+          mediaId = createMediaScopeKey(modelId, fieldName, "vid_item");
+        }
+        const cachedUrl = mediaId ? videoUrlCache.get(mediaId) : "";
+        const rawSrc = String(item.src || "");
+        const safeSrc = rawSrc.startsWith("blob:")
+          ? (cachedUrl || "")
+          : (rawSrc || cachedUrl || "");
         return {
-          mediaId: item.mediaId || "",
-          src: item.src || "",
+          mediaId,
+          src: safeSrc,
           name: item.name || fallbackName
         };
       }
@@ -2027,9 +2104,9 @@
       }
     }
 
-    function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix }) {
+    function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix, modelId = "", fieldName = "photos" }) {
       const list = (Array.isArray(photos) ? photos : [])
-        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
         .filter(Boolean);
 
       return `
@@ -2061,14 +2138,14 @@
       `;
     }
 
-    function attachPhotoGalleryEvents(rootEl, photos, uploadInputId, downloadPrefix, onAddFiles, onRemovePhoto) {
+    function attachPhotoGalleryEvents(rootEl, photos, uploadInputId, downloadPrefix, onAddFiles, onRemovePhoto, modelId = "model", fieldName = "photos") {
       const fileInput = rootEl.querySelector(`#${uploadInputId}`);
       if (fileInput) {
         fileInput.addEventListener("change", async (e) => {
           const files = e.target.files;
           if (!files || !files.length) return;
           showToast("Обработка фото...");
-          const compressed = await compressImageFiles(files);
+          const compressed = await compressImageFiles(files, 680, 0.64, modelId, fieldName);
           e.target.value = "";
           if (!compressed.length) {
             showToast("Не удалось загрузить фото");
@@ -2079,7 +2156,7 @@
       }
 
       const normalized = (Array.isArray(photos) ? photos : [])
-        .map((p, idx) => normalizePhotoEntry(p, idx))
+        .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
         .filter(Boolean);
 
       rootEl.querySelectorAll(".dl-photo-btn").forEach((btn) => {
@@ -2106,9 +2183,9 @@
       });
     }
 
-    function renderVideoGalleryBlock({ title, videos, uploadInputId, downloadPrefix }) {
+    function renderVideoGalleryBlock({ title, videos, uploadInputId, downloadPrefix, modelId = "", fieldName = "videos" }) {
       const list = (Array.isArray(videos) ? videos : [])
-        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`))
+        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`, modelId, fieldName))
         .filter(Boolean);
 
       return `
@@ -2137,14 +2214,14 @@
       `;
     }
 
-    function attachVideoGalleryEvents(rootEl, videos, uploadInputId, downloadPrefix, onAddVideos, onRemoveVideo) {
+    function attachVideoGalleryEvents(rootEl, videos, uploadInputId, downloadPrefix, onAddVideos, onRemoveVideo, modelId = "model", fieldName = "videos") {
       const fileInput = rootEl.querySelector(`#${uploadInputId}`);
       if (fileInput) {
         fileInput.addEventListener("change", async (e) => {
           const files = e.target.files;
           if (!files || !files.length) return;
           showToast("Сохранение видео...");
-          const loaded = await readVideoFiles(files);
+          const loaded = await readVideoFiles(files, modelId, fieldName);
           e.target.value = "";
           if (!loaded.length) {
             showToast("Не удалось загрузить видео");
@@ -2155,7 +2232,7 @@
       }
 
       const normalized = (Array.isArray(videos) ? videos : [])
-        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`))
+        .map((v, idx) => normalizeMediaItem(v, `${downloadPrefix}_${idx + 1}.mp4`, modelId, fieldName))
         .filter(Boolean);
 
       rootEl.querySelectorAll(".dl-vid-btn").forEach((btn) => {
@@ -2305,7 +2382,9 @@
             title: "Фотографии модели",
             photos,
             uploadInputId: "modelPhotosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_photo`
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_photo`,
+            modelId: model.id,
+            fieldName: "photos"
           })}
         </div>
 
@@ -2314,7 +2393,9 @@
             title: "Видео модели",
             videos,
             uploadInputId: "modelVideosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_video`
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_video`,
+            modelId: model.id,
+            fieldName: "videos"
           })}
         </div>
 
@@ -2376,7 +2457,9 @@
             title: "Фото проходки до дома модели",
             photos: routePhotos,
             uploadInputId: "modelRoutePhotosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route`
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route`,
+            modelId: model.id,
+            fieldName: "routePhotos"
           })}
         </div>
 
@@ -2385,7 +2468,9 @@
             title: "Видео проходки до дома модели",
             videos: routeVideos,
             uploadInputId: "modelRouteVideosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route_video`
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route_video`,
+            modelId: model.id,
+            fieldName: "routeVideos"
           })}
         </div>
       `);
@@ -2446,7 +2531,9 @@
           renderMain();
           openModelDetailSheet(modelId);
           showToast("Фото удалено");
-        }
+        },
+        modelId,
+        "photos"
       );
 
       attachPhotoGalleryEvents(
@@ -2471,7 +2558,9 @@
           renderMain();
           openModelDetailSheet(modelId);
           showToast("Фото проходки удалено");
-        }
+        },
+        modelId,
+        "routePhotos"
       );
 
       attachVideoGalleryEvents(
@@ -2496,7 +2585,9 @@
           renderMain();
           openModelDetailSheet(modelId);
           showToast("Видео удалено");
-        }
+        },
+        modelId,
+        "videos"
       );
 
       attachVideoGalleryEvents(
@@ -2521,7 +2612,9 @@
           renderMain();
           openModelDetailSheet(modelId);
           showToast("Видео проходки удалено");
-        }
+        },
+        modelId,
+        "routeVideos"
       );
     }
 
@@ -2637,12 +2730,12 @@
         document.body.removeChild(ta);
         showToast("Скопировано");
       } catch (e) {
-        showToast("Ошибка копирования");
+        showToast("Не удалось скопировать");
       }
     }
 
-    function serializePhotoForStorage(p, idx = 0, includeImageData = true) {
-      const norm = normalizePhotoEntry(p, idx);
+    function serializePhotoForStorage(p, idx = 0, includeImageData = true, modelId = "", fieldName = "photos") {
+      const norm = normalizePhotoEntry(p, idx, modelId, fieldName);
       if (!norm) return null;
       const srcVal = getPhotoDisplaySrc(norm);
       if (norm.photoId && srcVal.startsWith("data:image/")) {
@@ -2650,7 +2743,7 @@
         void savePhotoDataToDb(norm.photoId, srcVal, norm.name);
       }
       return {
-        photoId: norm.photoId || `ph_legacy_${idx}`,
+        photoId: norm.photoId || (modelId ? createMediaScopeKey(modelId, fieldName, `legacy_${idx}`) : `ph_legacy_${idx}`),
         name: norm.name || `photo_${idx + 1}.jpg`,
         src: includeImageData && srcVal && srcVal.length < 180000 ? srcVal : ""
       };
@@ -2660,39 +2753,45 @@
       return {
         ...srcState,
         models: Array.isArray(srcState.models)
-          ? srcState.models.map((m) => ({
-              ...m,
-              photos: Array.isArray(m.photos)
-                ? m.photos
-                    .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos))
-                    .filter(Boolean)
-                : [],
-              routePhotos: Array.isArray(m.routePhotos)
-                ? m.routePhotos
-                    .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos))
-                    .filter(Boolean)
-                : [],
-              videos: Array.isArray(m.videos)
-                ? m.videos.map((v) => {
-                    if (!v || typeof v !== "object") return null;
-                    return {
-                      mediaId: v.mediaId || "",
-                      src: (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "",
-                      name: v.name || "video.mp4"
-                    };
-                  }).filter(Boolean)
-                : [],
-              routeVideos: Array.isArray(m.routeVideos)
-                ? m.routeVideos.map((v) => {
-                    if (!v || typeof v !== "object") return null;
-                    return {
-                      mediaId: v.mediaId || "",
-                      src: (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "",
-                      name: v.name || "route_video.mp4"
-                    };
-                  }).filter(Boolean)
-                : []
-            }))
+          ? srcState.models.map((m, mIdx) => {
+              const mId = String(m?.id || `m_sync_${mIdx}`).trim();
+              return {
+                ...m,
+                id: mId,
+                photos: Array.isArray(m.photos)
+                  ? m.photos
+                      .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos, mId, "photos"))
+                      .filter(Boolean)
+                  : [],
+                routePhotos: Array.isArray(m.routePhotos)
+                  ? m.routePhotos
+                      .map((p, idx) => serializePhotoForStorage(p, idx, includePhotos, mId, "routePhotos"))
+                      .filter(Boolean)
+                  : [],
+                videos: Array.isArray(m.videos)
+                  ? m.videos.map((v, idx) => {
+                      const normV = normalizeMediaItem(v, `video_${idx + 1}.mp4`, mId, "videos");
+                      if (!normV) return null;
+                      return {
+                        mediaId: normV.mediaId,
+                        src: (typeof normV.src === "string" && !normV.src.startsWith("blob:")) ? normV.src : "",
+                        name: normV.name || `video_${idx + 1}.mp4`
+                      };
+                    }).filter(Boolean)
+                  : [],
+                routeVideos: Array.isArray(m.routeVideos)
+                  ? m.routeVideos.map((v, idx) => {
+                      const normV = normalizeMediaItem(v, `route_video_${idx + 1}.mp4`, mId, "routeVideos");
+                      if (!normV) return null;
+                      return {
+                        mediaId: normV.mediaId,
+                        src: (typeof normV.src === "string" && !normV.src.startsWith("blob:")) ? normV.src : "",
+                        name: normV.name || `route_video_${idx + 1}.mp4`
+                      };
+                    }).filter(Boolean)
+                  : []
+              };
+            })
           : []
       };
     }
@@ -2706,45 +2805,47 @@
         localStorage.setItem(STORE_KEY, JSON.stringify(syncable));
       } catch (e) {
         try {
-          const lightLocalState = buildSyncableState(state, { includePhotos: false });
-          localStorage.setItem(STORE_KEY, JSON.stringify(lightLocalState));
-        } catch (e2) {
-          showToast("Недостаточно места в локальном хранилище");
-        }
+          localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: false })));
+        } catch (e2) {}
       }
-      if (!isApplyingRemoteSnapshot) {
+      if (!isApplyingRemoteSnapshot && sharedDocRef && currentUser) {
         void pushStateToCloud(syncable);
       }
     }
 
-    async function pushStateToCloud(snapshotState) {
-      if (!db || !currentUser || !sharedDocRef || isApplyingRemoteSnapshot) return;
+    async function pushStateToCloud(payloadState) {
+      if (!sharedDocRef || !currentUser) return;
       try {
-        let payloadToSend = buildSyncableState(snapshotState, { includePhotos: true });
-        let serialized = JSON.stringify(payloadToSend);
-        if (serialized.length > 820000) {
-          payloadToSend = buildSyncableState(snapshotState, { includePhotos: false });
-          serialized = JSON.stringify(payloadToSend);
+        let serialized = JSON.stringify(payloadState);
+        if (serialized.length > 850000) {
+          const compactPayload = buildSyncableState(payloadState, { includePhotos: false });
+          serialized = JSON.stringify(compactPayload);
         }
-        await setDoc(sharedDocRef, {
-          dataJson: serialized,
-          updatedAt: Date.now(),
-          updatedBy: currentUser.uid || "member"
-        });
+        await setDoc(
+          sharedDocRef,
+          {
+            dataJson: serialized,
+            updatedAt: Date.now(),
+            updatedBy: currentUser.uid || "anonymous"
+          },
+          { merge: true }
+        );
         setSyncStatus("Синхронизация: общая база онлайн");
       } catch (err) {
-        console.error("Shared sync write failed:", err);
-        setSyncStatus("Синхронизация: ошибка отправки (сохранено локально)");
+        console.error("Failed to push state to cloud:", err);
+        setSyncStatus("Синхронизация: ошибка записи");
       }
     }
 
-    function mergePhotosPreservingLocal(remoteList, localList) {
+    function mergePhotosPreservingLocal(remoteList, localList, modelId = "", fieldName = "photos") {
       const remArr = (Array.isArray(remoteList) ? remoteList : [])
-        .map((p, idx) => normalizePhotoEntry(p, idx))
-        .filter(Boolean);
+        .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
+        .filter(Boolean)
+        .filter((p) => !modelId || !p.photoId || belongsToModelScope(p.photoId, modelId, fieldName));
       const locArr = (Array.isArray(localList) ? localList : [])
-        .map((p, idx) => normalizePhotoEntry(p, idx))
-        .filter(Boolean);
+        .map((p, idx) => normalizePhotoEntry(p, idx, modelId, fieldName))
+        .filter(Boolean)
+        .filter((p) => !modelId || !p.photoId || belongsToModelScope(p.photoId, modelId, fieldName));
 
       const localById = new Map();
       locArr.forEach((lp) => {
@@ -2766,14 +2867,46 @@
         };
       });
 
-      if (merged.length === 0 && locArr.length > 0) {
-        return locArr;
-      }
-
       const mergedIds = new Set(merged.map((m) => m.photoId).filter(Boolean));
       locArr.forEach((lp) => {
         if (!lp.photoId || !mergedIds.has(lp.photoId)) {
           merged.push(lp);
+        }
+      });
+
+      return merged;
+    }
+
+    function mergeVideosPreservingLocal(remoteList, localList, modelId = "", fieldName = "videos") {
+      const remArr = (Array.isArray(remoteList) ? remoteList : [])
+        .map((v, idx) => normalizeMediaItem(v, `${fieldName}_${idx + 1}.mp4`, modelId, fieldName))
+        .filter(Boolean)
+        .filter((v) => !modelId || !v.mediaId || belongsToModelScope(v.mediaId, modelId, fieldName));
+      const locArr = (Array.isArray(localList) ? localList : [])
+        .map((v, idx) => normalizeMediaItem(v, `${fieldName}_${idx + 1}.mp4`, modelId, fieldName))
+        .filter(Boolean)
+        .filter((v) => !modelId || !v.mediaId || belongsToModelScope(v.mediaId, modelId, fieldName));
+
+      const localById = new Map();
+      locArr.forEach((lv) => {
+        if (lv.mediaId) localById.set(lv.mediaId, lv);
+      });
+
+      const merged = remArr.map((rv) => {
+        const cachedUrl = rv.mediaId ? videoUrlCache.get(rv.mediaId) : "";
+        const localMatch = rv.mediaId ? localById.get(rv.mediaId) : null;
+        const bestSrc = rv.src || cachedUrl || (localMatch ? localMatch.src : "");
+        return {
+          mediaId: rv.mediaId || (localMatch ? localMatch.mediaId : ""),
+          src: bestSrc,
+          name: rv.name || (localMatch ? localMatch.name : "video.mp4")
+        };
+      });
+
+      const mergedIds = new Set(merged.map((m) => m.mediaId).filter(Boolean));
+      locArr.forEach((lv) => {
+        if (!lv.mediaId || !mergedIds.has(lv.mediaId)) {
+          merged.push(lv);
         }
       });
 
@@ -2878,13 +3011,16 @@
 
             normalizedRemote.models = (normalizedRemote.models || []).map((rm) => {
               const localM = localModelsById.get(rm.id);
-              if (!localM) return rm;
+              const localPhotos = localM ? localM.photos : [];
+              const localRoutePhotos = localM ? localM.routePhotos : [];
+              const localVideos = localM ? localM.videos : [];
+              const localRouteVideos = localM ? localM.routeVideos : [];
               return {
                 ...rm,
-                photos: mergePhotosPreservingLocal(rm.photos, localM.photos),
-                routePhotos: mergePhotosPreservingLocal(rm.routePhotos, localM.routePhotos),
-                videos: (Array.isArray(rm.videos) && rm.videos.some((v) => v && v.src)) ? rm.videos : (Array.isArray(localM.videos) ? localM.videos : []),
-                routeVideos: (Array.isArray(rm.routeVideos) && rm.routeVideos.some((v) => v && v.src)) ? rm.routeVideos : (Array.isArray(localM.routeVideos) ? localM.routeVideos : [])
+                photos: mergePhotosPreservingLocal(rm.photos, localPhotos, rm.id, "photos"),
+                routePhotos: mergePhotosPreservingLocal(rm.routePhotos, localRoutePhotos, rm.id, "routePhotos"),
+                videos: mergeVideosPreservingLocal(rm.videos, localVideos, rm.id, "videos"),
+                routeVideos: mergeVideosPreservingLocal(rm.routeVideos, localRouteVideos, rm.id, "routeVideos")
               };
             });
 
@@ -3479,7 +3615,7 @@
           if (!files || !files.length) return;
           setSubmitBusy(true);
           showToast("Обработка фото...");
-          const added = await compressImageFiles(files);
+          const added = await compressImageFiles(files, 680, 0.64, "draft_model", "photos");
           e.target.value = "";
           pendingPhotos = [...pendingPhotos, ...added];
           const el = document.getElementById("newModelPhotosCount");
@@ -3493,7 +3629,7 @@
           if (!files || !files.length) return;
           setSubmitBusy(true);
           showToast("Обработка фото проходки...");
-          const added = await compressImageFiles(files);
+          const added = await compressImageFiles(files, 680, 0.64, "draft_model", "routePhotos");
           e.target.value = "";
           pendingRoutePhotos = [...pendingRoutePhotos, ...added];
           const el = document.getElementById("newModelRoutePhotosCount");
@@ -3507,7 +3643,7 @@
           if (!files || !files.length) return;
           setSubmitBusy(true);
           showToast("Сохранение видео...");
-          const added = await readVideoFiles(files);
+          const added = await readVideoFiles(files, "draft_model", "videos");
           e.target.value = "";
           pendingVideos = [...pendingVideos, ...added];
           const el = document.getElementById("newModelVideosCount");
@@ -3521,7 +3657,7 @@
           if (!files || !files.length) return;
           setSubmitBusy(true);
           showToast("Сохранение видео проходки...");
-          const added = await readVideoFiles(files);
+          const added = await readVideoFiles(files, "draft_model", "routeVideos");
           e.target.value = "";
           pendingRouteVideos = [...pendingRouteVideos, ...added];
           const el = document.getElementById("newModelRouteVideosCount");
@@ -3530,7 +3666,7 @@
           showToast(`Выбрано видео проходки: ${pendingRouteVideos.length}`);
         });
 
-        document.getElementById("createModelForm").addEventListener("submit", (e) => {
+        document.getElementById("createModelForm").addEventListener("submit", async (e) => {
           e.preventDefault();
           if (isProcessingMedia) {
             showToast("Дождитесь завершения обработки медиа");
@@ -3539,8 +3675,76 @@
           const fd = new FormData(e.target);
           const allowed = getAllowedModelCities();
           const chosenCity = normalizeModelCity(fd.get("city"), allowed) || allowed[0] || "Тбилиси";
+          const nextModelId = "m_" + Date.now();
+
+          const rescopedPhotos = await Promise.all(pendingPhotos.map(async (p, idx) => {
+            const oldId = p.photoId || "";
+            const srcVal = getPhotoDisplaySrc(p);
+            const newId = createMediaScopeKey(nextModelId, "photos", `ph_${Date.now()}_${idx}`);
+            if (srcVal) {
+              photoUrlCache.set(newId, srcVal);
+              await savePhotoDataToDb(newId, srcVal, p.name || `photo_${idx + 1}.jpg`);
+            }
+            if (oldId) {
+              await deletePhotoFromDb(oldId);
+            }
+            return { photoId: newId, src: srcVal, name: p.name || `photo_${idx + 1}.jpg` };
+          }));
+
+          const rescopedRoutePhotos = await Promise.all(pendingRoutePhotos.map(async (p, idx) => {
+            const oldId = p.photoId || "";
+            const srcVal = getPhotoDisplaySrc(p);
+            const newId = createMediaScopeKey(nextModelId, "routePhotos", `rph_${Date.now()}_${idx}`);
+            if (srcVal) {
+              photoUrlCache.set(newId, srcVal);
+              await savePhotoDataToDb(newId, srcVal, p.name || `route_${idx + 1}.jpg`);
+            }
+            if (oldId) {
+              await deletePhotoFromDb(oldId);
+            }
+            return { photoId: newId, src: srcVal, name: p.name || `route_${idx + 1}.jpg` };
+          }));
+
+          const rescopedVideos = await Promise.all(pendingVideos.map(async (v, idx) => {
+            const oldId = v.mediaId || "";
+            const newId = createMediaScopeKey(nextModelId, "videos", `vid_${Date.now()}_${idx}`);
+            const rec = oldId ? await getVideoRecordFromDb(oldId) : null;
+            let nextSrc = (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "";
+            if (rec && rec.blob instanceof Blob) {
+              await saveVideoBlobToDb(newId, rec.blob, rec.name || v.name || "video.mp4", rec.mimeType || rec.blob.type || "video/mp4");
+              nextSrc = URL.createObjectURL(rec.blob);
+              videoUrlCache.set(newId, nextSrc);
+            } else if (typeof v.src === "string" && v.src.startsWith("blob:")) {
+              nextSrc = v.src;
+              videoUrlCache.set(newId, nextSrc);
+            }
+            if (oldId) {
+              await deleteVideoFromDb(oldId);
+            }
+            return { mediaId: newId, src: nextSrc, name: v.name || `video_${idx + 1}.mp4` };
+          }));
+
+          const rescopedRouteVideos = await Promise.all(pendingRouteVideos.map(async (v, idx) => {
+            const oldId = v.mediaId || "";
+            const newId = createMediaScopeKey(nextModelId, "routeVideos", `rvid_${Date.now()}_${idx}`);
+            const rec = oldId ? await getVideoRecordFromDb(oldId) : null;
+            let nextSrc = (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "";
+            if (rec && rec.blob instanceof Blob) {
+              await saveVideoBlobToDb(newId, rec.blob, rec.name || v.name || "route_video.mp4", rec.mimeType || rec.blob.type || "video/mp4");
+              nextSrc = URL.createObjectURL(rec.blob);
+              videoUrlCache.set(newId, nextSrc);
+            } else if (typeof v.src === "string" && v.src.startsWith("blob:")) {
+              nextSrc = v.src;
+              videoUrlCache.set(newId, nextSrc);
+            }
+            if (oldId) {
+              await deleteVideoFromDb(oldId);
+            }
+            return { mediaId: newId, src: nextSrc, name: v.name || `route_video_${idx + 1}.mp4` };
+          }));
+
           const newModel = {
-            id: "m_" + Date.now(),
+            id: nextModelId,
             name: String(fd.get("name") || "").trim(),
             city: chosenCity,
             meta: String(fd.get("meta") || "").trim(),
@@ -3553,10 +3757,10 @@
             services: "",
             extras: "",
             phones: "",
-            photos: [...pendingPhotos],
-            routePhotos: [...pendingRoutePhotos],
-            videos: [...pendingVideos],
-            routeVideos: [...pendingRouteVideos],
+            photos: rescopedPhotos,
+            routePhotos: rescopedRoutePhotos,
+            videos: rescopedVideos,
+            routeVideos: rescopedRouteVideos,
             active: true
           };
           if (!Array.isArray(state.models)) state.models = [];
