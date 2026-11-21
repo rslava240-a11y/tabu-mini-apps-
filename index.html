@@ -50,7 +50,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* App Container */
     .app-shell {
       max-width: 520px;
       margin: 0 auto;
@@ -60,7 +59,6 @@
       padding-bottom: calc(84px + env(safe-area-inset-bottom));
     }
 
-    /* Header */
     .app-header {
       position: sticky;
       top: 0;
@@ -108,10 +106,11 @@
       font-weight: 500;
     }
 
-    .header-actions {
+    .card-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      flex-shrink: 0;
     }
 
     .icon-btn {
@@ -133,7 +132,6 @@
       background: var(--accent-soft);
     }
 
-    /* Main Content Area */
     .main-view {
       flex: 1;
       padding: 12px 16px 24px;
@@ -163,7 +161,6 @@
       border: 1px solid var(--border);
     }
 
-    /* Search & Filter Bar */
     .search-wrap {
       position: relative;
       margin-bottom: 12px;
@@ -174,7 +171,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 11px 38px 11px 38px;
+      padding: 11px 38px 11px 14px;
       font-family: inherit;
       font-size: 14px;
       color: var(--text);
@@ -185,15 +182,6 @@
     .search-input:focus {
       border-color: var(--accent);
       background: var(--surface-elevated);
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      pointer-events: none;
     }
 
     .clear-search {
@@ -218,7 +206,6 @@
       display: inline-flex;
     }
 
-    /* Filter Chips */
     .chips-row {
       display: flex;
       gap: 8px;
@@ -254,7 +241,6 @@
       border-color: var(--accent);
     }
 
-    /* Cards */
     .card-list {
       display: flex;
       flex-direction: column;
@@ -312,6 +298,7 @@
       color: var(--text-secondary);
       margin-top: 3px;
       line-height: 1.42;
+      white-space: pre-line;
     }
 
     .card-meta {
@@ -336,19 +323,6 @@
     .pill.danger {
       background: var(--danger-soft);
       color: var(--danger);
-    }
-
-    .pill.success {
-      background: var(--success-soft);
-      color: var(--success);
-    }
-
-    /* Action Buttons inside Cards */
-    .card-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
     }
 
     .mini-btn {
@@ -390,7 +364,6 @@
       color: var(--text-secondary);
     }
 
-    /* Primary Floating / Section Button */
     .btn-primary {
       background: var(--accent);
       color: #ffffff;
@@ -434,7 +407,6 @@
       gap: 6px;
     }
 
-    /* Sub-tabs inside Info / Finance */
     .segmented {
       display: flex;
       background: var(--surface);
@@ -467,7 +439,6 @@
       box-shadow: var(--shadow-sm);
     }
 
-    /* Stats Summary Grid */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -495,7 +466,6 @@
       letter-spacing: -0.02em;
     }
 
-    /* Bottom Navigation */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -555,7 +525,6 @@
       color: #ffffff;
     }
 
-    /* Bottom Sheet Modal */
     .sheet-backdrop {
       position: fixed;
       inset: 0;
@@ -593,14 +562,6 @@
       transform: translateY(0);
     }
 
-    .sheet-handle {
-      width: 38px;
-      height: 4px;
-      border-radius: 999px;
-      background: var(--border);
-      margin: 0 auto 14px;
-    }
-
     .sheet-header {
       display: flex;
       align-items: center;
@@ -615,7 +576,6 @@
       letter-spacing: -0.02em;
     }
 
-    /* Form Controls inside Sheet */
     .form-group {
       margin-bottom: 12px;
     }
@@ -649,7 +609,6 @@
       resize: vertical;
     }
 
-    /* Model Detail Sheet Blocks */
     .detail-block {
       background: var(--surface-elevated);
       border: 1px solid var(--border);
@@ -673,30 +632,6 @@
       font-weight: 500;
       line-height: 1.45;
       white-space: pre-line;
-    }
-
-    /* Model Photo Strip & Gallery */
-    .model-card-photos {
-      display: flex;
-      gap: 7px;
-      margin-top: 10px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      scrollbar-width: none;
-    }
-
-    .model-card-photos::-webkit-scrollbar {
-      display: none;
-    }
-
-    .model-thumb {
-      width: 58px;
-      height: 74px;
-      border-radius: 10px;
-      object-fit: cover;
-      border: 1px solid var(--border);
-      flex-shrink: 0;
-      background: var(--accent-soft);
     }
 
     .photo-grid {
@@ -811,7 +746,6 @@
       margin-bottom: 12px;
     }
 
-    /* Toast Notification */
     .toast {
       position: fixed;
       top: 16px;
@@ -835,7 +769,6 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* Edge / Side Payment Note Tab */
     .side-edge-tab {
       position: fixed;
       right: 0;
@@ -906,7 +839,6 @@
       transform: translateX(0);
     }
 
-    /* Empty State */
     .empty-state {
       text-align: center;
       padding: 36px 20px;
@@ -927,55 +859,32 @@
       font-size: 13px;
       line-height: 1.45;
     }
-
-    /* Ripple effect */
-    .ripple {
-      position: relative;
-      overflow: hidden;
-    }
-    .ripple-ink {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.08);
-      transform: scale(0);
-      animation: rippleAnim 0.5s linear;
-      pointer-events: none;
-    }
-    @keyframes rippleAnim {
-      to {
-        transform: scale(3.5);
-        opacity: 0;
-      }
-    }
   </style>
 </head>
 <body>
   <div class="toast" id="toast"></div>
 
   <div class="app-shell">
-    <!-- Top Header -->
     <header class="app-header">
       <div class="brand">
-      <div class="brand-badge" style="background:#ffffff; border:1px solid var(--border); padding:2px;">
-        <svg viewBox="0 0 120 64" width="30" height="24" aria-label="TABU" role="img" style="display:block; width:100%; height:100%;">
-          <text x="4" y="43" fill="#141414" font-family="Inter Tight, Arial Black, sans-serif" font-weight="900" font-size="25" letter-spacing="-1.5">TAB</text>
-          <path d="M56 16 L63 16 L63 34 C63 40 67 43 72 43 C77 43 81 40 81 34 L81 16 L88 16 L88 35 C88 45 81 50 72 50 C63 50 56 45 56 35 Z" fill="#b31b24"/>
-          <circle cx="72" cy="14" r="5" fill="#b31b24"/>
-          <path d="M65 24 C67 20 77 20 79 24 L82 44 L62 44 Z" fill="#b31b24"/>
-        </svg>
+        <div class="brand-badge" style="background:#ffffff; border:1px solid var(--border); padding:2px;">
+          <svg viewBox="0 0 120 64" width="30" height="24" aria-label="TABU" role="img" style="display:block; width:100%; height:100%;">
+            <text x="4" y="43" fill="#141414" font-family="Inter Tight, Arial Black, sans-serif" font-weight="900" font-size="25" letter-spacing="-1.5">TAB</text>
+            <path d="M56 16 L63 16 L63 34 C63 40 67 43 72 43 C77 43 81 40 81 34 L81 16 L88 16 L88 35 C88 45 81 50 72 50 C63 50 56 45 56 35 Z" fill="#b31b24"/>
+            <circle cx="72" cy="14" r="5" fill="#b31b24"/>
+            <path d="M65 24 C67 20 77 20 79 24 L82 44 L62 44 Z" fill="#b31b24"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title" id="appTitle">Tabu</div>
+          <div class="brand-sub" id="appSub">Операционная база • Тбилиси / Белград</div>
+          <div class="brand-sub" id="syncStatusText" style="font-size:11px; color:var(--text-muted);">Синхронизация: подключение...</div>
+        </div>
       </div>
-      <div>
-        <div class="brand-title" id="appTitle">Tabu</div>
-        <div class="brand-sub" id="appSub">Операционная база • Тбилиси / Белград</div>
-        <div class="brand-sub" id="syncStatusText" style="font-size:11px; color:var(--text-muted);">Синхронизация: подключение...</div>
-      </div>
-    </div>
     </header>
 
-    <!-- Dynamic Main Viewport -->
     <main class="main-view" id="mainView"></main>
 
-    <!-- Bottom Tab Bar -->
     <nav class="bottom-nav" id="bottomNav">
       <button class="nav-item active" data-tab="bl">
         <span class="nav-icon-wrap">
@@ -1020,12 +929,10 @@
     </nav>
   </div>
 
-  <!-- Reusable Bottom Sheet -->
   <div class="sheet-backdrop" id="sheetBackdrop">
     <div class="sheet" id="sheetContent"></div>
   </div>
 
-  <!-- Side Edge Tab & Slide-Out Payment Note -->
   <button type="button" class="side-edge-tab" id="sidePaymentEdgeBtn" title="Методы оплаты">Оплата</button>
   <button type="button" class="side-edge-tab otc-edge-tab" id="sideOtcEdgeBtn" title="One time code">One time code</button>
   <div class="side-note-drawer" id="sidePaymentDrawer" aria-hidden="true">
@@ -1078,7 +985,6 @@
       }
     }
 
-    // Telegram WebApp Integration
     const tg = window.Telegram && window.Telegram.WebApp;
     if (tg) {
       tg.ready();
@@ -1089,11 +995,10 @@
       } catch (e) {}
     }
 
-    const APP_NAME = "Tabu";
-    const CUR = "";
     const STORE_KEY = "miniapp_tabu_v1";
+    const VIDEO_DB_NAME = "tabu_media_db_v1";
+    const VIDEO_STORE_NAME = "videos";
 
-    // Pre-populated database extracted from result_2.json (Group: Tabu)
     const def = {
       bl: [
         { id: "bl_1", phone: "+995 568 93 94 53", reason: "ЧС (из общего списка)" },
@@ -1223,45 +1128,18 @@
           name: "Мила (Mila)",
           city: "Тбилиси",
           meta: "18 лет · 156/47",
-          age: "18 лет",
-          params: "156/47",
           district: "Ортачала / Салоса",
           incall: "30м 500 / 1ч 700 GEL",
           outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL",
           address: "57 Beri Gabriel Salosi Ave, 3 эт, кв 22\nЯндекс: Е. Вирсаладзе 1 | Bolt: 8 Lertsami st",
-          entryCode: "",
           mapLink: "",
           services: "Классика, минет в резинке",
           extras: "Окончание на тело 50$, поцелуи 50-200$, фут-фетиш 100$, пара 300$, доминация 200$",
           phones: "544 113 771 (Denny)",
-          notes: "",
           photos: [],
-          active: true
-        },
-        {
-          id: "m_2",
-          name: "Kim / Ким",
-          city: "Белград",
-          meta: "22 года · 170/56",
-          incall: "30м 150€ (17600 RSD) / 1ч 200€ (23500 RSD)",
-          outcall: "1ч 250€ (30500 RSD)",
-          address: "Цара Уроша 42, Белград (домофон DOCA, 1 эт, кв 1)",
-          services: "Классика, минет в резинке",
-          extras: "МБР 30€, тело 50€, поцелуи 50€, куни 50€, 69 100€, фут-фетиш 100€",
-          phones: "Евросайты",
-          active: true
-        },
-        {
-          id: "m_3",
-          name: "Tiffany",
-          city: "Белград",
-          meta: "19 лет · 166/49",
-          incall: "30м 150€ / 1ч 200€",
-          outcall: "1ч 250€",
-          address: "Strahinjića Bana 22, Belgrade (домофон 22, 4 эт, кв 22)",
-          services: "Классика, минет в резинке",
-          extras: "МБР 50€, рот 100€, тело 50€, лицо 100€, поцелуи 50€, стрип 50€, лесби 200€, фут-фетиш 100€, пара/групп 400€, доминация 100€",
-          phones: "Евросайты",
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1275,19 +1153,10 @@
           services: "Классика, минет в резинке",
           extras: "69 / куни / глубокий / стрип / МБР / игрушки — 100 GEL; фут-фетиш 200 GEL; лесби 150$; поцелуи / анал 100$; пара 250$; групп 300$",
           phones: "Рабочий номер в смене",
-          active: true
-        },
-        {
-          id: "m_5",
-          name: "Lola (Белград)",
-          city: "Белград",
-          meta: "19 лет · 170/56",
-          incall: "30м 150€ / 1ч 200€",
-          outcall: "1ч 250€",
-          address: "Цара Уроша 42, Белград (домофон DOCA, 1 эт, кв 1)",
-          services: "Классика, минет в резинке",
-          extras: "Уточнять при бронировании",
-          phones: "Евросайты",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1301,6 +1170,10 @@
           services: "Классика, минет в резинке",
           extras: "Глубокий / рот / лицо / поцелуи / куни / 69 — 50$; тело / стрип — 100 GEL; анал 300$; лесби / пара / групп — 350$",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1314,6 +1187,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1327,6 +1204,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1340,6 +1221,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1353,6 +1238,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1366,6 +1255,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "+995 593 14 97 30 (slav)",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1379,6 +1272,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1392,6 +1289,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1405,6 +1306,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1414,10 +1319,14 @@
           meta: "18 лет · 170/49",
           incall: "30м 500 / 1ч 700 GEL",
           outcall: "1ч 1000 / 2ч 1500 / 3-4ч 3000 GEL, ночь 3000$",
-          address: "57A Beri Gabriel Salosi Ave, 2 эт, кв 13\n(ранее также Навтлуги 10, Блок А, подъезд 2, эт 13, кв 181, код 559687)",
+          address: "57A Beri Gabriel Salosi Ave, 2 эт, кв 13",
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "+995 574 217 613 (Макс TABU)",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1431,6 +1340,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1444,6 +1357,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "+995 544 11 37 98 (Denny)",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1457,6 +1374,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         },
         {
@@ -1470,19 +1391,10 @@
           services: "Классика, минет в резинке",
           extras: "Уточнять в чате смены",
           phones: "Рабочий номер в смене",
-          active: true
-        },
-        {
-          id: "m_20",
-          name: "Ариана / Ася / Карина / Милана / Даша",
-          city: "Онлайн",
-          meta: "Вирт-сопровождение",
-          incall: "Онлайн-формат",
-          outcall: "По запросу",
-          address: "Удалённые рабочие номера (вирт)",
-          services: "Вирт-сопровождение",
-          extras: "Уточнять у операторов направления",
-          phones: "+995 544 113 964 (Илья — Ариана-вирт)",
+          photos: [],
+          routePhotos: [],
+          videos: [],
+          routeVideos: [],
           active: true
         }
       ],
@@ -1541,6 +1453,101 @@
     };
 
     const BASE_MODEL_CITIES = ["Тбилиси"];
+
+    let videoDbPromise = null;
+    function openVideoDb() {
+      if (videoDbPromise) return videoDbPromise;
+      videoDbPromise = new Promise((resolve) => {
+        if (!("indexedDB" in window)) {
+          resolve(null);
+          return;
+        }
+        try {
+          const req = indexedDB.open(VIDEO_DB_NAME, 1);
+          req.onupgradeneeded = () => {
+            const dbInstance = req.result;
+            if (!dbInstance.objectStoreNames.contains(VIDEO_STORE_NAME)) {
+              dbInstance.createObjectStore(VIDEO_STORE_NAME, { keyPath: "id" });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        } catch (err) {
+          resolve(null);
+        }
+      });
+      return videoDbPromise;
+    }
+
+    async function saveVideoBlobToDb(id, blob, name, mimeType) {
+      const idb = await openVideoDb();
+      if (!idb || !blob) return false;
+      return new Promise((resolve) => {
+        try {
+          const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
+          tx.objectStore(VIDEO_STORE_NAME).put({
+            id,
+            blob,
+            name: name || "video.mp4",
+            mimeType: mimeType || blob.type || "video/mp4",
+            savedAt: Date.now()
+          });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+
+    async function getVideoRecordFromDb(id) {
+      const idb = await openVideoDb();
+      if (!idb || !id) return null;
+      return new Promise((resolve) => {
+        try {
+          const tx = idb.transaction(VIDEO_STORE_NAME, "readonly");
+          const req = tx.objectStore(VIDEO_STORE_NAME).get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    async function deleteVideoFromDb(id) {
+      const idb = await openVideoDb();
+      if (!idb || !id) return;
+      try {
+        const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
+        tx.objectStore(VIDEO_STORE_NAME).delete(id);
+      } catch (e) {}
+    }
+
+    async function hydrateStoredVideos(modelsList) {
+      if (!Array.isArray(modelsList) || !modelsList.length) return;
+      let changed = false;
+      for (const m of modelsList) {
+        if (!m) continue;
+        for (const field of ["videos", "routeVideos"]) {
+          const arr = Array.isArray(m[field]) ? m[field] : [];
+          for (const item of arr) {
+            if (item && typeof item === "object" && item.mediaId) {
+              const rec = await getVideoRecordFromDb(item.mediaId);
+              if (rec && rec.blob instanceof Blob) {
+                if (!item.src || item.src.startsWith("blob:")) {
+                  item.src = URL.createObjectURL(rec.blob);
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (changed) {
+        renderMain();
+      }
+    }
 
     function normalizeCityName(rawCity) {
       const val = String(rawCity || "").trim();
@@ -1616,7 +1623,7 @@
       return lines.join("\n");
     }
 
-    function compressImageFiles(fileList, maxSize = 720, quality = 0.68) {
+    function compressImageFiles(fileList, maxSize = 640, quality = 0.62) {
       const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("image/"));
       if (!files.length) return Promise.resolve([]);
 
@@ -1651,16 +1658,15 @@
               }
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
               let dataUrl = canvas.toDataURL("image/jpeg", quality);
-              // If still large (>220KB), scale down slightly further so Firestore stays well under 1MB limit
               let q = quality;
               let w = canvas.width;
               let h = canvas.height;
               let guard = 0;
-              while (dataUrl.length > 220000 && guard < 4) {
+              while (dataUrl.length > 135000 && guard < 5) {
                 guard += 1;
-                w = Math.max(240, Math.round(w * 0.78));
-                h = Math.max(240, Math.round(h * 0.78));
-                q = Math.max(0.45, q - 0.1);
+                w = Math.max(220, Math.round(w * 0.76));
+                h = Math.max(220, Math.round(h * 0.76));
+                q = Math.max(0.42, q - 0.08);
                 canvas.width = w;
                 canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
@@ -1681,24 +1687,31 @@
       return Promise.all(files.map(readSingleFile)).then((items) => items.filter(Boolean));
     }
 
-    function readVideoFiles(fileList) {
+    async function readVideoFiles(fileList) {
       const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith("video/"));
-      if (!files.length) return Promise.resolve([]);
+      if (!files.length) return [];
 
-      const readSingleVideo = (file) => new Promise((resolve) => {
+      const results = [];
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        const mediaId = `vid_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+        let objectUrl = "";
         try {
-          const objectUrl = URL.createObjectURL(file);
-          resolve({
+          objectUrl = URL.createObjectURL(file);
+        } catch (err) {
+          objectUrl = "";
+        }
+        await saveVideoBlobToDb(mediaId, file, file.name || "video.mp4", file.type || "video/mp4");
+        if (objectUrl) {
+          results.push({
+            mediaId,
             src: objectUrl,
             name: file.name || "video.mp4",
             size: file.size || 0
           });
-        } catch (err) {
-          resolve(null);
         }
-      });
-
-      return Promise.all(files.map(readSingleVideo)).then((items) => items.filter(Boolean));
+      }
+      return results;
     }
 
     function normalizeMediaItem(item, fallbackName = "media") {
@@ -1706,8 +1719,12 @@
       if (typeof item === "string") {
         return { src: item, name: fallbackName };
       }
-      if (typeof item === "object" && item.src) {
-        return { src: item.src, name: item.name || fallbackName };
+      if (typeof item === "object" && (item.src || item.mediaId)) {
+        return {
+          mediaId: item.mediaId || "",
+          src: item.src || "",
+          name: item.name || fallbackName
+        };
       }
       return null;
     }
@@ -1725,11 +1742,37 @@
       return new Blob([arr], { type: mime });
     }
 
-    function triggerPhotoDownload(src, filename = "photo.jpg") {
+    async function triggerMediaDownload(itemOrSrc, filename = "file.jpg") {
+      const mediaObj = typeof itemOrSrc === "object" && itemOrSrc !== null
+        ? itemOrSrc
+        : { src: itemOrSrc, mediaId: "", name: filename };
+      let src = String(mediaObj.src || "");
+      const outName = mediaObj.name || filename;
+
+      if (mediaObj.mediaId) {
+        const rec = await getVideoRecordFromDb(mediaObj.mediaId);
+        if (rec && rec.blob instanceof Blob) {
+          const idbUrl = URL.createObjectURL(rec.blob);
+          const a = document.createElement("a");
+          a.href = idbUrl;
+          a.download = rec.name || outName;
+          a.rel = "noopener noreferrer";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => {
+            try { URL.revokeObjectURL(idbUrl); } catch (e) {}
+          }, 5000);
+          showToast("Скачивание запущено");
+          return;
+        }
+      }
+
       if (!src) {
         showToast("Нет файла для скачивания");
         return;
       }
+
       try {
         let href = src;
         let tempUrl = "";
@@ -1740,7 +1783,7 @@
         }
         const link = document.createElement("a");
         link.href = href;
-        link.download = filename;
+        link.download = outName;
         link.rel = "noopener noreferrer";
         if (!src.startsWith("data:") && !src.startsWith("blob:")) {
           link.target = "_blank";
@@ -1759,12 +1802,12 @@
           window.open(src, "_blank", "noopener,noreferrer");
           showToast("Открыто для сохранения");
         } catch (err2) {
-          showToast("Не удалось скачать фото");
+          showToast("Не удалось скачать файл");
         }
       }
     }
 
-    function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix, onAddFiles, onRemovePhoto }) {
+    function renderPhotoGalleryBlock({ title, photos, uploadInputId, downloadPrefix }) {
       const list = Array.isArray(photos) ? photos : [];
       return `
         <div class="detail-block">
@@ -1781,7 +1824,7 @@
                 <div class="photo-tile">
                   <img src="${escapeHtml(src)}" alt="${escapeHtml(title)} ${idx + 1}" onerror="this.style.display='none'" />
                   <div class="photo-tile-overlay">
-                    <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}">⬇ Скачать</button>
+                    <button type="button" class="photo-action-btn dl-photo-btn" data-idx="${idx}" data-prefix="${escapeHtml(downloadPrefix)}">⬇ Скачать</button>
                     <button type="button" class="photo-action-btn del rm-photo-btn" data-idx="${idx}">✕</button>
                   </div>
                 </div>
@@ -1814,7 +1857,7 @@
           e.stopPropagation();
           const idx = Number(btn.dataset.idx);
           const src = photos[idx];
-          triggerPhotoDownload(src, `${downloadPrefix}_${idx + 1}.jpg`);
+          void triggerMediaDownload(src, `${downloadPrefix}_${idx + 1}.jpg`);
         });
       });
 
@@ -1864,7 +1907,7 @@
         fileInput.addEventListener("change", async (e) => {
           const files = e.target.files;
           if (!files || !files.length) return;
-          showToast("Загрузка видео...");
+          showToast("Сохранение видео...");
           const loaded = await readVideoFiles(files);
           e.target.value = "";
           if (!loaded.length) {
@@ -1885,7 +1928,7 @@
           const idx = Number(btn.dataset.idx);
           const item = normalized[idx];
           if (item) {
-            triggerPhotoDownload(item.src, item.name || `${downloadPrefix}_${idx + 1}.mp4`);
+            void triggerMediaDownload(item, item.name || `${downloadPrefix}_${idx + 1}.mp4`);
           }
         });
       });
@@ -1894,6 +1937,10 @@
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           const idx = Number(btn.dataset.idx);
+          const item = normalized[idx];
+          if (item && item.mediaId) {
+            void deleteVideoFromDb(item.mediaId);
+          }
           onRemoveVideo(idx);
         });
       });
@@ -1924,31 +1971,31 @@
           </div>
           <div class="form-group">
             <label class="form-label">Возраст / параметры</label>
-            <input class="form-control" name="meta" type="text" value="${escapeHtml(model.meta || "")}" placeholder="Например: 20 лет · 168/52" />
+            <input class="form-control" name="meta" type="text" value="${escapeHtml(model.meta || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Район</label>
-            <input class="form-control" name="district" type="text" value="${escapeHtml(model.district || "")}" placeholder="Район города" />
+            <input class="form-control" name="district" type="text" value="${escapeHtml(model.district || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Incall</label>
-            <input class="form-control" name="incall" type="text" value="${escapeHtml(model.incall || "")}" placeholder="Прайс апартаментов" />
+            <input class="form-control" name="incall" type="text" value="${escapeHtml(model.incall || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Outcall</label>
-            <input class="form-control" name="outcall" type="text" value="${escapeHtml(model.outcall || "")}" placeholder="Прайс выезда" />
+            <input class="form-control" name="outcall" type="text" value="${escapeHtml(model.outcall || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Адрес и ориентиры</label>
-            <textarea class="form-control" name="address" placeholder="Улица, дом, этаж, код">${escapeHtml(model.address || "")}</textarea>
+            <textarea class="form-control" name="address">${escapeHtml(model.address || "")}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">Ссылка на карту / адрес</label>
-            <input class="form-control" name="mapLink" type="text" value="${escapeHtml(model.mapLink || "")}" placeholder="https://maps.google.com/..." />
+            <input class="form-control" name="mapLink" type="text" value="${escapeHtml(model.mapLink || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Описание для клиента</label>
-            <textarea class="form-control" name="description" placeholder="Текст анкеты / описание для клиента (если пусто — соберётся автоматически)">${escapeHtml(model.description || "")}</textarea>
+            <textarea class="form-control" name="description">${escapeHtml(model.description || "")}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">Услуги</label>
@@ -2022,9 +2069,7 @@
             title: "Фотографии модели",
             photos,
             uploadInputId: "modelPhotosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_photo`,
-            onAddFiles: () => {},
-            onRemovePhoto: () => {}
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_photo`
           })}
         </div>
 
@@ -2095,9 +2140,7 @@
             title: "Фото проходки до дома модели",
             photos: routePhotos,
             uploadInputId: "modelRoutePhotosUploadInput",
-            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route`,
-            onAddFiles: () => {},
-            onRemovePhoto: () => {}
+            downloadPrefix: `${(model.name || "model").replace(/\s+/g, "_")}_route`
           })}
         </div>
 
@@ -2287,7 +2330,6 @@
           closings: Array.isArray(parsed.closings) ? parsed.closings : [],
           weeklyReports: Array.isArray(parsed.weeklyReports) ? parsed.weeklyReports : []
         };
-        localStorage.setItem(STORE_KEY, JSON.stringify(normalizedState));
         return normalizedState;
       } catch (e) {
         const fallback = JSON.parse(JSON.stringify(def));
@@ -2370,16 +2412,30 @@
           ? srcState.models.map((m) => ({
               ...m,
               photos: Array.isArray(m.photos)
-                ? m.photos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 360000)
+                ? m.photos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 220000)
                 : [],
               routePhotos: Array.isArray(m.routePhotos)
-                ? m.routePhotos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 360000)
+                ? m.routePhotos.filter((p) => typeof p === "string" && p.length > 0 && p.length < 220000)
                 : [],
               videos: Array.isArray(m.videos)
-                ? m.videos.filter((v) => v && typeof v.src === "string" && !v.src.startsWith("blob:"))
+                ? m.videos.map((v) => {
+                    if (!v || typeof v !== "object") return null;
+                    return {
+                      mediaId: v.mediaId || "",
+                      src: (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "",
+                      name: v.name || "video.mp4"
+                    };
+                  }).filter(Boolean)
                 : [],
               routeVideos: Array.isArray(m.routeVideos)
-                ? m.routeVideos.filter((v) => v && typeof v.src === "string" && !v.src.startsWith("blob:"))
+                ? m.routeVideos.map((v) => {
+                    if (!v || typeof v !== "object") return null;
+                    return {
+                      mediaId: v.mediaId || "",
+                      src: (typeof v.src === "string" && !v.src.startsWith("blob:")) ? v.src : "",
+                      name: v.name || "route_video.mp4"
+                    };
+                  }).filter(Boolean)
                 : []
             }))
           : []
@@ -2395,17 +2451,17 @@
         localStorage.setItem(STORE_KEY, JSON.stringify(syncable));
       } catch (e) {
         try {
-          const minimalState = {
+          const compactState = {
             ...syncable,
             models: (syncable.models || []).map((m) => ({
               ...m,
-              photos: (m.photos || []).slice(0, 2),
-              routePhotos: (m.routePhotos || []).slice(0, 2)
+              photos: (m.photos || []).slice(0, 4),
+              routePhotos: (m.routePhotos || []).slice(0, 3)
             }))
           };
-          localStorage.setItem(STORE_KEY, JSON.stringify(minimalState));
+          localStorage.setItem(STORE_KEY, JSON.stringify(compactState));
         } catch (e2) {
-          showToast("Недостаточно памяти устройства для сохранения фото");
+          showToast("Недостаточно места в локальном хранилище");
         }
       }
       if (!isApplyingRemoteSnapshot) {
@@ -2418,14 +2474,15 @@
       try {
         let payloadToSend = buildSyncableState(snapshotState);
         let serialized = JSON.stringify(payloadToSend);
-        // Firestore single document limit is 1,048,576 bytes; keep well under ~850KB
-        if (serialized.length > 820000) {
+        let maxPhotosPerModel = 10;
+        while (serialized.length > 820000 && maxPhotosPerModel > 2) {
+          maxPhotosPerModel -= 2;
           payloadToSend = {
             ...payloadToSend,
             models: (payloadToSend.models || []).map((m) => ({
               ...m,
-              photos: (m.photos || []).slice(0, 3),
-              routePhotos: (m.routePhotos || []).slice(0, 2)
+              photos: (m.photos || []).slice(0, maxPhotosPerModel),
+              routePhotos: (m.routePhotos || []).slice(0, Math.max(2, Math.floor(maxPhotosPerModel / 2)))
             }))
           };
           serialized = JSON.stringify(payloadToSend);
@@ -2459,7 +2516,12 @@
 
         setSyncStatus("Синхронизация: вход...");
         if (initialAuthToken) {
-          await signInWithCustomToken(auth, initialAuthToken);
+          try {
+            await signInWithCustomToken(auth, initialAuthToken);
+          } catch (customTokenErr) {
+            console.warn("Custom token sign-in failed, falling back to anonymous auth:", customTokenErr);
+            await signInAnonymously(auth);
+          }
         } else {
           await signInAnonymously(auth);
         }
@@ -2481,7 +2543,6 @@
           sharedDocRef,
           (docSnap) => {
             if (!docSnap.exists()) return;
-            // Avoid clobbering a freshly created/edited item while local write is in flight
             if (Date.now() - lastLocalMutationAt < 1200) {
               setSyncStatus("Синхронизация: общая база онлайн");
               return;
@@ -2533,7 +2594,6 @@
             if (remoteSerialized !== currentSerialized) {
               isApplyingRemoteSnapshot = true;
               try {
-                // Preserve any active local blob video URLs if model IDs match
                 const localVideosByModelId = new Map();
                 (state.models || []).forEach((lm) => {
                   if (lm && lm.id) {
@@ -2548,14 +2608,15 @@
                   if (!localV) return rm;
                   return {
                     ...rm,
-                    videos: (Array.isArray(rm.videos) && rm.videos.length > 0) ? rm.videos : localV.videos,
-                    routeVideos: (Array.isArray(rm.routeVideos) && rm.routeVideos.length > 0) ? rm.routeVideos : localV.routeVideos
+                    videos: (Array.isArray(rm.videos) && rm.videos.some((v) => v && v.src)) ? rm.videos : localV.videos,
+                    routeVideos: (Array.isArray(rm.routeVideos) && rm.routeVideos.some((v) => v && v.src)) ? rm.routeVideos : localV.routeVideos
                   };
                 });
 
                 state = normalizedRemote;
+                void hydrateStoredVideos(state.models);
                 try {
-                  localStorage.setItem(STORE_KEY, remoteSerialized);
+                  localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state)));
                 } catch (lsErr) {}
                 renderMain();
               } finally {
@@ -3125,7 +3186,7 @@
           if (submitBtn) {
             submitBtn.disabled = busy;
             submitBtn.style.opacity = busy ? "0.65" : "1";
-            submitBtn.textContent = busy ? "Обработка фото..." : "Создать анкету";
+            submitBtn.textContent = busy ? "Обработка медиа..." : "Создать анкету";
           }
         };
 
@@ -3160,29 +3221,35 @@
         document.getElementById("newModelVideosInput").addEventListener("change", async (e) => {
           const files = e.target.files;
           if (!files || !files.length) return;
+          setSubmitBusy(true);
+          showToast("Сохранение видео...");
           const added = await readVideoFiles(files);
           e.target.value = "";
           pendingVideos = [...pendingVideos, ...added];
           const el = document.getElementById("newModelVideosCount");
           if (el) el.textContent = String(pendingVideos.length);
+          setSubmitBusy(false);
           showToast(`Выбрано видео: ${pendingVideos.length}`);
         });
 
         document.getElementById("newModelRouteVideosInput").addEventListener("change", async (e) => {
           const files = e.target.files;
           if (!files || !files.length) return;
+          setSubmitBusy(true);
+          showToast("Сохранение видео проходки...");
           const added = await readVideoFiles(files);
           e.target.value = "";
           pendingRouteVideos = [...pendingRouteVideos, ...added];
           const el = document.getElementById("newModelRouteVideosCount");
           if (el) el.textContent = String(pendingRouteVideos.length);
+          setSubmitBusy(false);
           showToast(`Выбрано видео проходки: ${pendingRouteVideos.length}`);
         });
 
         document.getElementById("createModelForm").addEventListener("submit", (e) => {
           e.preventDefault();
           if (isProcessingMedia) {
-            showToast("Дождитесь завершения обработки фото");
+            showToast("Дождитесь завершения обработки медиа");
             return;
           }
           const fd = new FormData(e.target);
@@ -3213,7 +3280,7 @@
           saveState();
           closeSheet();
           renderModelsTab(container);
-          showToast(`Анкета добавлена (фото: ${newModel.photos.length})`);
+          showToast(`Анкета создана (фото: ${newModel.photos.length}, видео: ${newModel.videos.length})`);
         });
       });
 
@@ -3315,6 +3382,12 @@
       container.querySelectorAll(".del-model-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
+          const target = (state.models || []).find((x) => x.id === btn.dataset.id);
+          if (target) {
+            [...(target.videos || []), ...(target.routeVideos || [])].forEach((v) => {
+              if (v && v.mediaId) void deleteVideoFromDb(v.mediaId);
+            });
+          }
           state.models = (state.models || []).filter((x) => x.id !== btn.dataset.id);
           saveState();
           renderModelsTab(container);
@@ -3369,15 +3442,15 @@
           <form id="teamMemberForm">
             <div class="form-group">
               <label class="form-label">Имя / ник</label>
-              <input class="form-control" name="name" type="text" value="${escapeHtml(member?.name || "")}" placeholder="Например: Denny" required />
+              <input class="form-control" name="name" type="text" value="${escapeHtml(member?.name || "")}" required />
             </div>
             <div class="form-group">
               <label class="form-label">Роль / должность</label>
-              <input class="form-control" name="role" type="text" value="${escapeHtml(member?.role || "")}" placeholder="Например: Оператор" required />
+              <input class="form-control" name="role" type="text" value="${escapeHtml(member?.role || "")}" required />
             </div>
             <div class="form-group">
               <label class="form-label">Заметка / рабочие номера</label>
-              <textarea class="form-control" name="note" placeholder="Номера, смены или комментарии">${escapeHtml(member?.note || "")}</textarea>
+              <textarea class="form-control" name="note">${escapeHtml(member?.note || "")}</textarea>
             </div>
             <button type="submit" class="btn-primary" style="width:100%;">${isEdit ? "Сохранить изменения" : "Добавить в команду"}</button>
           </form>
@@ -3416,10 +3489,7 @@
         });
       };
 
-      const addBtn = document.getElementById("addTeamMemberBtn");
-      if (addBtn) {
-        addBtn.addEventListener("click", () => openTeamMemberSheet(null));
-      }
+      document.getElementById("addTeamMemberBtn").addEventListener("click", () => openTeamMemberSheet(null));
 
       container.querySelectorAll(".edit-team-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -3503,7 +3573,7 @@
     }
 
     function formatAccountingEntryText(entry) {
-      const lines = [
+      return [
         entry.date || "",
         `Модель: ${entry.model || ""}`,
         `Продолжительность: ${entry.duration || ""}`,
@@ -3513,8 +3583,7 @@
         `Номер клиента: ${entry.clientPhone || ""}`,
         `Отзыв: ${entry.review || ""}`,
         `Адрес: ${entry.address || ""}`
-      ];
-      return lines.join("\n").trim();
+      ].join("\n").trim();
     }
 
     function buildShiftReportText(report) {
@@ -3539,11 +3608,10 @@
     function buildDailyClosingText(closing) {
       const slashLeft = String(closing.slashLeft ?? "").trim();
       const slashRight = String(closing.slashRight ?? "").trim();
-      const slashLine = `${slashLeft}/${slashRight}`;
       return [
         closing.date || formatTodayDotDate(),
         `ТОТАЛ ДНЯ: ${closing.totalDay ?? ""}`.trim(),
-        slashLine
+        `${slashLeft}/${slashRight}`
       ].join("\n");
     }
 
@@ -3572,28 +3640,24 @@
           <div class="form-group">
             <label class="form-label">Модель</label>
             <input class="form-control" name="model" type="text" list="accModelsList" placeholder="Имя модели" />
-            <datalist id="accModelsList">
-              ${modelOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}
-            </datalist>
+            <datalist id="accModelsList">${modelOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}</datalist>
           </div>
           <div class="form-group">
             <label class="form-label">Продолжительность</label>
-            <input class="form-control" name="duration" type="text" placeholder="Например: 1ч / 30м" />
+            <input class="form-control" name="duration" type="text" placeholder="1ч / 30м" />
           </div>
           <div class="form-group">
             <label class="form-label">Прайс</label>
-            <input class="form-control" name="price" type="text" placeholder="Например: 700 GEL / 5300" />
+            <input class="form-control" name="price" type="text" placeholder="700 GEL / 5300" />
           </div>
           <div class="form-group">
             <label class="form-label">Оператор</label>
             <input class="form-control" name="operator" type="text" list="accOperatorsList" placeholder="Имя оператора" />
-            <datalist id="accOperatorsList">
-              ${teamOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}
-            </datalist>
+            <datalist id="accOperatorsList">${teamOptions.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("")}</datalist>
           </div>
           <div class="form-group">
             <label class="form-label">Время</label>
-            <input class="form-control" name="time" type="text" placeholder="Например: 21:30" />
+            <input class="form-control" name="time" type="text" placeholder="21:30" />
           </div>
           <div class="form-group">
             <label class="form-label">Номер клиента</label>
@@ -3655,10 +3719,10 @@
           </div>
           <div class="form-group">
             <label class="form-label">ТОТАЛ ДНЯ: (подсчитано по записям: ${calculatedSum})</label>
-            <input class="form-control" id="totalDayInput" name="totalDay" type="text" value="${calculatedSum > 0 ? String(calculatedSum) : ""}" placeholder="Например: 5300" />
+            <input class="form-control" name="totalDay" type="text" value="${calculatedSum > 0 ? String(calculatedSum) : ""}" />
           </div>
           <div class="form-group">
-            <label class="form-label">Значение до / после слеша (формат 100000/34650 или 100000/)</label>
+            <label class="form-label">Значение до / после слеша</label>
             <div style="display:flex; align-items:center; gap:8px;">
               <input class="form-control" name="slashLeft" type="text" placeholder="100000" />
               <span style="font-weight:700;">/</span>
@@ -3715,7 +3779,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Кол-во соо</label>
-            <input class="form-control" name="messagesCount" type="text" placeholder="Количество сообщений" />
+            <input class="form-control" name="messagesCount" type="text" />
           </div>
           <div class="form-group">
             <label class="form-label">Заказы (кол-во)</label>
@@ -3727,11 +3791,11 @@
           </div>
           <div class="form-group">
             <label class="form-label">Оператор</label>
-            <input class="form-control" name="operator" type="text" placeholder="Имя оператора" />
+            <input class="form-control" name="operator" type="text" />
           </div>
           <div class="form-group">
             <label class="form-label">Тотал</label>
-            <input class="form-control" name="total" type="text" placeholder="Итоговая сумма" />
+            <input class="form-control" name="total" type="text" />
           </div>
           <button type="submit" class="btn-primary" style="width:100%;">Сохранить отчёт</button>
         </form>
@@ -3758,23 +3822,21 @@
               </div>
               <div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label">Модель</label>
-                <input class="form-control ord-model" type="text" value="${escapeHtml(prev.model)}" placeholder="Например: Оксана" />
+                <input class="form-control ord-model" type="text" value="${escapeHtml(prev.model)}" />
               </div>
               <div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label">Продолжительность</label>
-                <input class="form-control ord-duration" type="text" value="${escapeHtml(prev.duration)}" placeholder="Например: 1ч" />
+                <input class="form-control ord-duration" type="text" value="${escapeHtml(prev.duration)}" />
               </div>
               <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">Прайс</label>
-                <input class="form-control ord-price" type="text" value="${escapeHtml(prev.price)}" placeholder="Например: 700 GEL" />
+                <input class="form-control ord-price" type="text" value="${escapeHtml(prev.price)}" />
               </div>
             </div>
           `;
         }).join("");
 
-        if (ordersCountInput) {
-          ordersCountInput.value = String(orderBlocksCount);
-        }
+        if (ordersCountInput) ordersCountInput.value = String(orderBlocksCount);
 
         ordersContainer.querySelectorAll(".remove-order-block-btn").forEach((btn) => {
           btn.addEventListener("click", () => {
@@ -3848,8 +3910,8 @@
         </div>
         <form id="weeklyReportForm">
           <div class="form-group">
-            <label class="form-label">ТОТАЛ НЕДЕЛИ ГРУЗИЯ/АРМЕНИЯ/ДУБАЙ : (сумма по отчётам: ${sumFromShifts})</label>
-            <input class="form-control" name="totalWeek" type="text" value="${sumFromShifts > 0 ? String(sumFromShifts) : ""}" placeholder="Введите сумму недели" />
+            <label class="form-label">ТОТАЛ НЕДЕЛИ ГРУЗИЯ/АРМЕНИЯ/ДУБАЙ : (сумма: ${sumFromShifts})</label>
+            <input class="form-control" name="totalWeek" type="text" value="${sumFromShifts > 0 ? String(sumFromShifts) : ""}" />
           </div>
           <div class="detail-block">
             <div class="detail-label">Предпросмотр</div>
@@ -3866,13 +3928,9 @@
       const totalWeekInput = form.querySelector('input[name="totalWeek"]');
       const previewEl = document.getElementById("weeklyPreviewText");
 
-      const updatePreview = () => {
-        if (previewEl) {
-          previewEl.textContent = buildWeeklyReportText({ totalWeek: totalWeekInput.value.trim() });
-        }
-      };
-
-      totalWeekInput.addEventListener("input", updatePreview);
+      totalWeekInput.addEventListener("input", () => {
+        if (previewEl) previewEl.textContent = buildWeeklyReportText({ totalWeek: totalWeekInput.value.trim() });
+      });
 
       document.getElementById("copyWeeklyPreviewBtn").addEventListener("click", () => {
         copyText(buildWeeklyReportText({ totalWeek: totalWeekInput.value.trim() }));
@@ -3911,7 +3969,6 @@
         const cl = chronologicalClosings[i];
         const snapshotCount = Math.max(0, Math.min(entries.length, Number(cl.count ?? entries.length)));
         const newerEntriesCount = Math.max(0, entries.length - snapshotCount);
-
         while (entryCursor < newerEntriesCount && entryCursor < entries.length) {
           feedItems.push({ kind: "entry", item: entries[entryCursor] });
           entryCursor += 1;
@@ -3955,7 +4012,7 @@
                 return `
                   <div class="card">
                     <div class="card-top">
-                      <div class="card-sub" style="margin:0; white-space:pre-line; color:var(--text); font-weight:600;">${escapeHtml(buildDailyClosingText(cl))}</div>
+                      <div class="card-sub" style="margin:0; color:var(--text); font-weight:600;">${escapeHtml(buildDailyClosingText(cl))}</div>
                       <div class="card-actions">
                         <button type="button" class="mini-btn copy-closing-btn" data-id="${escapeHtml(cl.id)}">Копировать</button>
                         <button type="button" class="mini-btn danger del-closing-btn" data-id="${escapeHtml(cl.id)}">✕</button>
@@ -4008,11 +4065,8 @@
 
       container.querySelectorAll(".acc-select-cb").forEach((cb) => {
         cb.addEventListener("change", () => {
-          if (cb.checked) {
-            selectedAccIds.add(cb.dataset.id);
-          } else {
-            selectedAccIds.delete(cb.dataset.id);
-          }
+          if (cb.checked) selectedAccIds.add(cb.dataset.id);
+          else selectedAccIds.delete(cb.dataset.id);
           renderAccountingSubTab(container);
         });
       });
@@ -4064,7 +4118,6 @@
         const wk = chronologicalWeekly[i];
         const snapshotCount = Math.max(0, Math.min(shifts.length, Number(wk.count ?? shifts.length)));
         const newerShiftsCount = Math.max(0, shifts.length - snapshotCount);
-
         while (shiftCursor < newerShiftsCount && shiftCursor < shifts.length) {
           feedItems.push({ kind: "shift", item: shifts[shiftCursor] });
           shiftCursor += 1;
@@ -4097,7 +4150,7 @@
                 return `
                   <div class="card">
                     <div class="card-top">
-                      <div class="card-sub" style="margin:0; white-space:pre-line; color:var(--text); font-weight:600;">${escapeHtml(buildWeeklyReportText(wk))}</div>
+                      <div class="card-sub" style="margin:0; color:var(--text); font-weight:600;">${escapeHtml(buildWeeklyReportText(wk))}</div>
                       <div class="card-actions">
                         <button type="button" class="mini-btn copy-weekly-btn" data-id="${escapeHtml(wk.id)}">Копировать</button>
                         <button type="button" class="mini-btn danger del-weekly-btn" data-id="${escapeHtml(wk.id)}">✕</button>
@@ -4116,7 +4169,7 @@
                       <input type="checkbox" class="shift-select-cb" data-id="${escapeHtml(rep.id)}" ${isChecked ? "checked" : ""} style="margin-top:4px; width:17px; height:17px;" />
                       <div>
                         <div class="card-title">${escapeHtml(rep.date || "Отчёт")}${rep.operator ? ` · ${escapeHtml(rep.operator)}` : ""}</div>
-                        <div class="card-sub" style="white-space:pre-line;">${escapeHtml(buildShiftReportText(rep))}</div>
+                        <div class="card-sub">${escapeHtml(buildShiftReportText(rep))}</div>
                       </div>
                     </label>
                     <div class="card-actions">
@@ -4150,11 +4203,8 @@
 
       container.querySelectorAll(".shift-select-cb").forEach((cb) => {
         cb.addEventListener("change", () => {
-          if (cb.checked) {
-            selectedShiftIds.add(cb.dataset.id);
-          } else {
-            selectedShiftIds.delete(cb.dataset.id);
-          }
+          if (cb.checked) selectedShiftIds.add(cb.dataset.id);
+          else selectedShiftIds.delete(cb.dataset.id);
           renderShiftsSubTab(container);
         });
       });
@@ -4252,43 +4302,34 @@
       });
 
       const sideEdgeBtn = document.getElementById("sidePaymentEdgeBtn");
-      if (sideEdgeBtn) {
-        sideEdgeBtn.addEventListener("click", () => openSidePaymentDrawer(false));
-      }
+      if (sideEdgeBtn) sideEdgeBtn.addEventListener("click", () => openSidePaymentDrawer(false));
 
       const sideOtcBtn = document.getElementById("sideOtcEdgeBtn");
-      if (sideOtcBtn) {
-        sideOtcBtn.addEventListener("click", () => openSideOtcDrawer(false));
-      }
+      if (sideOtcBtn) sideOtcBtn.addEventListener("click", () => openSideOtcDrawer(false));
 
       const sideDrawer = document.getElementById("sidePaymentDrawer");
       if (sideDrawer) {
         sideDrawer.addEventListener("click", (e) => {
-          if (e.target === sideDrawer) {
-            closeSidePaymentDrawer();
-          }
+          if (e.target === sideDrawer) closeSidePaymentDrawer();
         });
       }
 
       const sideOtcDrawer = document.getElementById("sideOtcDrawer");
       if (sideOtcDrawer) {
         sideOtcDrawer.addEventListener("click", (e) => {
-          if (e.target === sideOtcDrawer) {
-            closeSideOtcDrawer();
-          }
+          if (e.target === sideOtcDrawer) closeSideOtcDrawer();
         });
       }
 
       const backdrop = document.getElementById("sheetBackdrop");
       if (backdrop) {
         backdrop.addEventListener("click", (e) => {
-          if (e.target === backdrop) {
-            closeSheet();
-          }
+          if (e.target === backdrop) closeSheet();
         });
       }
 
       renderMain();
+      void hydrateStoredVideos(state.models);
       void initSharedGroupSync();
     }
 
