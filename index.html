@@ -1949,7 +1949,8 @@
             return {
               photoId,
               src: finalDataUrl,
-              name: file.name || `photo_${fileIdx + 1}.jpg`
+              name: file.name || `photo_${fileIdx + 1}.jpg`,
+              savedAt: Date.now()
             };
           };
 
@@ -1980,11 +1981,11 @@
               let w = canvas.width;
               let h = canvas.height;
               let guard = 0;
-              while (dataUrl.length > 95000 && guard < 6) {
+              while (dataUrl.length > 78000 && guard < 8) {
                 guard += 1;
-                w = Math.max(240, Math.round(w * 0.75));
-                h = Math.max(240, Math.round(h * 0.75));
-                q = Math.max(0.4, q - 0.08);
+                w = Math.max(220, Math.round(w * 0.78));
+                h = Math.max(220, Math.round(h * 0.78));
+                q = Math.max(0.38, q - 0.07);
                 canvas.width = w;
                 canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
@@ -2878,16 +2879,17 @@
     function serializePhotoForStorage(p, idx = 0, includeImageData = true, modelId = "", fieldName = "photos") {
       const norm = normalizePhotoEntry(p, idx, modelId, fieldName);
       if (!norm || !isUserAddedPhotoId(norm.photoId, modelId, fieldName)) return null;
-      const srcVal = getPhotoDisplaySrc(norm);
+      const recFromCache = norm.photoId ? photoUrlCache.get(norm.photoId) : "";
+      const srcVal = String(norm.src || recFromCache || "").trim();
       if (!srcVal || !srcVal.startsWith("data:image/")) return null;
-      if (norm.photoId && srcVal.startsWith("data:image/")) {
+      if (norm.photoId) {
         photoUrlCache.set(norm.photoId, srcVal);
         void savePhotoDataToDb(norm.photoId, srcVal, norm.name);
       }
       return {
         photoId: norm.photoId,
         name: norm.name || `photo_${idx + 1}.jpg`,
-        src: includeImageData && srcVal.length < 220000 ? srcVal : ""
+        src: includeImageData ? srcVal : ""
       };
     }
 
@@ -2911,34 +2913,14 @@
                       .filter(Boolean)
                   : [],
                 videos: Array.isArray(m.videos)
-                  ? m.videos.map((v, idx) => {
-                      const normV = normalizeMediaItem(v, `video_${idx + 1}.mp4`, mId, "videos");
-                      if (!normV) return null;
-                      const inlineVideo = (typeof normV.dataUrl === "string" && normV.dataUrl.startsWith("data:video/") && normV.dataUrl.length < 480000)
-                        ? normV.dataUrl
-                        : ((typeof normV.src === "string" && normV.src.startsWith("data:video/") && normV.src.length < 480000) ? normV.src : "");
-                      return {
-                        mediaId: normV.mediaId,
-                        src: inlineVideo || ((typeof normV.src === "string" && !normV.src.startsWith("blob:")) ? normV.src : ""),
-                        dataUrl: inlineVideo,
-                        name: normV.name || `video_${idx + 1}.mp4`
-                      };
-                    }).filter(Boolean)
+                  ? m.videos
+                      .map((v, idx) => normalizeMediaItem(v, `${mId}__videos__video_${idx + 1}.mp4`, mId, "videos"))
+                      .filter(Boolean)
                   : [],
                 routeVideos: Array.isArray(m.routeVideos)
-                  ? m.routeVideos.map((v, idx) => {
-                      const normV = normalizeMediaItem(v, `route_video_${idx + 1}.mp4`, mId, "routeVideos");
-                      if (!normV) return null;
-                      const inlineVideo = (typeof normV.dataUrl === "string" && normV.dataUrl.startsWith("data:video/") && normV.dataUrl.length < 480000)
-                        ? normV.dataUrl
-                        : ((typeof normV.src === "string" && normV.src.startsWith("data:video/") && normV.src.length < 480000) ? normV.src : "");
-                      return {
-                        mediaId: normV.mediaId,
-                        src: inlineVideo || ((typeof normV.src === "string" && !normV.src.startsWith("blob:")) ? normV.src : ""),
-                        dataUrl: inlineVideo,
-                        name: normV.name || `route_video_${idx + 1}.mp4`
-                      };
-                    }).filter(Boolean)
+                  ? m.routeVideos
+                      .map((v, idx) => normalizeMediaItem(v, `${mId}__routeVideos__route_video_${idx + 1}.mp4`, mId, "routeVideos"))
+                      .filter(Boolean)
                   : []
               };
             })
@@ -2947,19 +2929,18 @@
     }
 
     function saveState() {
-      if (!isApplyingRemoteSnapshot) {
-        lastLocalMutationAt = Date.now();
-      }
-      const syncable = buildSyncableState(state, { includePhotos: true });
+      if (isApplyingRemoteSnapshot) return;
+      lastLocalMutationAt = Date.now();
+      const fullPayload = buildSyncableState(state, { includePhotos: true });
       try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(syncable));
+        localStorage.setItem(STORE_KEY, JSON.stringify(fullPayload));
       } catch (e) {
         try {
           localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: false })));
         } catch (e2) {}
       }
-      if (!isApplyingRemoteSnapshot && sharedDocRef && currentUser) {
-        void pushStateToCloud(syncable);
+      if (sharedDocRef && currentUser) {
+        void pushStateToCloud(fullPayload);
       }
     }
 
@@ -2967,7 +2948,7 @@
       if (!sharedDocRef || !currentUser) return;
       try {
         let serialized = JSON.stringify(payloadState);
-        if (serialized.length > 880000) {
+        if (serialized.length > 920000) {
           const compactPayload = buildSyncableState(payloadState, { includePhotos: false });
           serialized = JSON.stringify(compactPayload);
         }
@@ -3007,12 +2988,15 @@
       const pushUniquePhoto = (photoObj) => {
         if (!photoObj || !photoObj.photoId) return;
         if (seenIds.has(photoObj.photoId)) return;
-        const srcVal = getPhotoDisplaySrc(photoObj);
+        const cached = photoUrlCache.get(photoObj.photoId) || "";
+        const srcVal = String(photoObj.src || cached || "").trim();
         if (!srcVal || !srcVal.startsWith("data:image/")) return;
         const sig = `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
         if (seenSigs.has(sig)) return;
         seenIds.add(photoObj.photoId);
         seenSigs.add(sig);
+        photoUrlCache.set(photoObj.photoId, srcVal);
+        void savePhotoDataToDb(photoObj.photoId, srcVal, photoObj.name || "photo.jpg");
         merged.push({
           photoId: photoObj.photoId,
           src: srcVal,
@@ -3024,10 +3008,6 @@
         const cachedSrc = rp.photoId ? photoUrlCache.get(rp.photoId) : "";
         const localMatch = rp.photoId ? localById.get(rp.photoId) : null;
         const bestSrc = rp.src || cachedSrc || (localMatch ? localMatch.src : "");
-        if (rp.photoId && bestSrc && bestSrc.startsWith("data:image/")) {
-          photoUrlCache.set(rp.photoId, bestSrc);
-          void savePhotoDataToDb(rp.photoId, bestSrc, rp.name);
-        }
         pushUniquePhoto({
           photoId: rp.photoId,
           src: bestSrc,
