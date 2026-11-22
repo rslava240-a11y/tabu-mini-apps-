@@ -959,7 +959,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const appId = typeof window.__app_id !== "undefined"
       ? window.__app_id
@@ -1494,6 +1494,153 @@
     const photoUrlCache = new Map();
     const videoUrlCache = new Map();
 
+    function normalizePhotoEntry(entry, idx = 0, modelId = "", fieldName = "photos") {
+      if (!entry) return null;
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        if (!trimmed) return null;
+        return {
+          photoId: modelId ? createMediaScopeKey(modelId, fieldName, `${USER_ADDED_PHOTO_PREFIX}legacy_${idx}`) : "",
+          src: trimmed,
+          name: `photo_${idx + 1}.jpg`
+        };
+      }
+      if (typeof entry === "object") {
+        let photoId = String(entry.photoId || entry.id || "").trim();
+        if (modelId && fieldName) {
+          if (photoId && !belongsToModelScope(photoId, modelId, fieldName)) {
+            const suffix = photoId.replace(/[^a-zA-Z0-9_-]/g, "").slice(-18);
+            photoId = createMediaScopeKey(
+              modelId,
+              fieldName,
+              suffix.startsWith(USER_ADDED_PHOTO_PREFIX) ? suffix : `${USER_ADDED_PHOTO_PREFIX}${suffix || `item_${idx}`}`
+            );
+          } else if (!photoId) {
+            photoId = createMediaScopeKey(modelId, fieldName, `${USER_ADDED_PHOTO_PREFIX}item_${idx}`);
+          }
+        }
+        const rawSrc = String(entry.src || entry.dataUrl || "").trim();
+        const cachedSrc = photoId ? String(photoUrlCache.get(photoId) || "").trim() : "";
+        return {
+          photoId,
+          src: rawSrc || cachedSrc || "",
+          name: String(entry.name || `photo_${idx + 1}.jpg`)
+        };
+      }
+      return null;
+    }
+
+    function getPhotoDisplaySrc(entry) {
+      if (!entry) return "";
+      if (typeof entry === "string") return entry.trim();
+      const photoId = String(entry.photoId || entry.id || "").trim();
+      const cached = photoId ? String(photoUrlCache.get(photoId) || "").trim() : "";
+      const direct = String(entry.src || entry.dataUrl || "").trim();
+      return direct || cached || "";
+    }
+
+    async function hydrateStoredPhotos(modelsList) {
+      if (!Array.isArray(modelsList) || modelsList.length === 0) return;
+      let anyHydrated = false;
+
+      for (let mIdx = 0; mIdx < modelsList.length; mIdx += 1) {
+        const model = modelsList[mIdx];
+        if (!model || typeof model !== "object") continue;
+        const modelId = String(model.id || `m_${mIdx}`).trim();
+
+        for (const fieldName of ["photos", "routePhotos"]) {
+          const arr = Array.isArray(model[fieldName]) ? model[fieldName] : [];
+          for (let i = 0; i < arr.length; i += 1) {
+            const norm = normalizePhotoEntry(arr[i], i, modelId, fieldName);
+            if (!norm || !norm.photoId) continue;
+
+            let resolvedSrc = getPhotoDisplaySrc(norm);
+            if (!resolvedSrc) {
+              const rec = await getPhotoRecordFromDb(norm.photoId);
+              if (rec && rec.dataUrl) {
+                resolvedSrc = String(rec.dataUrl).trim();
+              }
+            }
+
+            if (resolvedSrc) {
+              photoUrlCache.set(norm.photoId, resolvedSrc);
+              if (typeof arr[i] === "object" && arr[i] !== null && !arr[i].src) {
+                arr[i] = {
+                  ...arr[i],
+                  photoId: norm.photoId,
+                  src: resolvedSrc,
+                  name: norm.name
+                };
+                anyHydrated = true;
+              }
+            }
+          }
+        }
+      }
+
+      if (anyHydrated && !isApplyingRemoteSnapshot) {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: true })));
+        } catch (e) {}
+        renderMain();
+      }
+    }
+
+    async function hydrateStoredVideos(modelsList) {
+      if (!Array.isArray(modelsList) || modelsList.length === 0) return;
+      let anyHydrated = false;
+
+      for (let mIdx = 0; mIdx < modelsList.length; mIdx += 1) {
+        const model = modelsList[mIdx];
+        if (!model || typeof model !== "object") continue;
+        const modelId = String(model.id || `m_${mIdx}`).trim();
+
+        for (const fieldName of ["videos", "routeVideos"]) {
+          const arr = Array.isArray(model[fieldName]) ? model[fieldName] : [];
+          for (let i = 0; i < arr.length; i += 1) {
+            const norm = normalizeMediaItem(arr[i], `${fieldName}_${i + 1}.mp4`, modelId, fieldName);
+            if (!norm || !norm.mediaId) continue;
+
+            let playSrc = norm.src || norm.dataUrl || videoUrlCache.get(norm.mediaId) || "";
+            if (!playSrc || playSrc.startsWith("blob:")) {
+              const rec = await getVideoRecordFromDb(norm.mediaId);
+              if (rec) {
+                if (rec.blob instanceof Blob) {
+                  try {
+                    const freshBlobUrl = URL.createObjectURL(rec.blob);
+                    const prevUrl = videoUrlCache.get(norm.mediaId);
+                    if (prevUrl && prevUrl.startsWith("blob:") && prevUrl !== freshBlobUrl) {
+                      try { URL.revokeObjectURL(prevUrl); } catch (e) {}
+                    }
+                    videoUrlCache.set(norm.mediaId, freshBlobUrl);
+                    playSrc = freshBlobUrl;
+                  } catch (e) {
+                    playSrc = rec.dataUrl || "";
+                  }
+                } else if (rec.dataUrl) {
+                  playSrc = rec.dataUrl;
+                }
+              }
+            }
+
+            if (playSrc && typeof arr[i] === "object" && arr[i] !== null && arr[i].src !== playSrc) {
+              arr[i] = {
+                ...arr[i],
+                mediaId: norm.mediaId,
+                src: playSrc,
+                dataUrl: norm.dataUrl || (playSrc.startsWith("data:video/") ? playSrc : "")
+              };
+              anyHydrated = true;
+            }
+          }
+        }
+      }
+
+      if (anyHydrated && !isApplyingRemoteSnapshot) {
+        renderMain();
+      }
+    }
+
     let photoDbPromise = null;
     function openPhotoDb() {
       if (photoDbPromise) return photoDbPromise;
@@ -1521,140 +1668,92 @@
 
     async function savePhotoDataToDb(photoId, dataUrl, name = "photo.jpg") {
       if (!photoId || !dataUrl) return false;
+      photoUrlCache.set(photoId, dataUrl);
       const idb = await openPhotoDb();
-      if (!idb) return false;
-      return new Promise((resolve) => {
+      if (idb) {
+        await new Promise((resolve) => {
+          try {
+            const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
+            tx.objectStore(PHOTO_STORE_NAME).put({
+              id: photoId,
+              dataUrl,
+              name,
+              savedAt: Date.now()
+            });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+          } catch (e) {
+            resolve(false);
+          }
+        });
+      }
+      if (db && currentUser && String(dataUrl).length < 950000) {
         try {
-          const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
-          tx.objectStore(PHOTO_STORE_NAME).put({
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(photoId));
+          await setDoc(mediaDocRef, {
             id: photoId,
+            kind: "photo",
             dataUrl,
             name,
-            savedAt: Date.now()
+            updatedAt: Date.now()
           });
-          tx.oncomplete = () => resolve(true);
-          tx.onerror = () => resolve(false);
-        } catch (e) {
-          resolve(false);
+        } catch (err) {
+          console.warn("Firestore photo save fallback:", err);
         }
-      });
+      }
+      return true;
     }
 
     async function getPhotoRecordFromDb(photoId) {
       if (!photoId) return null;
       const idb = await openPhotoDb();
-      if (!idb) return null;
-      return new Promise((resolve) => {
-        try {
-          const tx = idb.transaction(PHOTO_STORE_NAME, "readonly");
-          const req = tx.objectStore(PHOTO_STORE_NAME).get(photoId);
-          req.onsuccess = () => resolve(req.result || null);
-          req.onerror = () => resolve(null);
-        } catch (e) {
-          resolve(null);
+      if (idb) {
+        const localRec = await new Promise((resolve) => {
+          try {
+            const tx = idb.transaction(PHOTO_STORE_NAME, "readonly");
+            const req = tx.objectStore(PHOTO_STORE_NAME).get(photoId);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+          } catch (e) {
+            resolve(null);
+          }
+        });
+        if (localRec && localRec.dataUrl) {
+          return localRec;
         }
-      });
+      }
+      if (db && currentUser) {
+        try {
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(photoId));
+          const snap = await getDoc(mediaDocRef);
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d && d.dataUrl) {
+              return { id: photoId, dataUrl: d.dataUrl, name: d.name || "photo.jpg" };
+            }
+          }
+        } catch (err) {
+          console.warn("Firestore photo fetch fallback:", err);
+        }
+      }
+      return null;
     }
 
     async function deletePhotoFromDb(photoId) {
       if (!photoId) return;
       photoUrlCache.delete(photoId);
       const idb = await openPhotoDb();
-      if (!idb) return;
-      try {
-        const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
-        tx.objectStore(PHOTO_STORE_NAME).delete(photoId);
-      } catch (e) {}
-    }
-
-    function normalizePhotoEntry(entry, idx = 0, modelId = "", fieldName = "photos") {
-      if (!entry) return null;
-      if (typeof entry === "string") {
-        const trimmed = entry.trim();
-        if (!trimmed) return null;
-        const scopedId = modelId
-          ? createMediaScopeKey(modelId, fieldName, `${USER_ADDED_PHOTO_PREFIX}str_${idx}`)
-          : "";
-        return {
-          photoId: scopedId,
-          src: trimmed,
-          name: `photo_${idx + 1}.jpg`
-        };
-      }
-      if (typeof entry === "object") {
-        let photoId = String(entry.photoId || "").trim();
-        if (modelId && fieldName) {
-          if (photoId && !belongsToModelScope(photoId, modelId, fieldName)) {
-            const cleanSuffix = photoId.replace(/[^a-zA-Z0-9_-]/g, "").slice(-14);
-            const prefixedSuffix = cleanSuffix.startsWith(USER_ADDED_PHOTO_PREFIX)
-              ? cleanSuffix
-              : `${USER_ADDED_PHOTO_PREFIX}${cleanSuffix || idx}`;
-            photoId = createMediaScopeKey(modelId, fieldName, prefixedSuffix);
-          } else if (!photoId) {
-            photoId = createMediaScopeKey(modelId, fieldName, `${USER_ADDED_PHOTO_PREFIX}item_${idx}`);
-          } else if (!isUserAddedPhotoId(photoId, modelId, fieldName)) {
-            const parts = photoId.split("__");
-            const tail = parts[parts.length - 1] || `item_${idx}`;
-            photoId = createMediaScopeKey(modelId, fieldName, `${USER_ADDED_PHOTO_PREFIX}${tail}`);
-          }
-        }
-        const cached = photoId ? photoUrlCache.get(photoId) : "";
-        const src = String(entry.src || cached || "").trim();
-        if (!photoId && !src) return null;
-        return {
-          photoId,
-          src,
-          name: String(entry.name || `photo_${idx + 1}.jpg`)
-        };
-      }
-      return null;
-    }
-
-    function getPhotoDisplaySrc(entry) {
-      if (!entry) return "";
-      if (typeof entry === "string") return entry;
-      if (entry.src) return entry.src;
-      if (entry.photoId && photoUrlCache.has(entry.photoId)) {
-        return photoUrlCache.get(entry.photoId);
-      }
-      return "";
-    }
-
-    async function hydrateStoredPhotos(modelsList) {
-      if (!Array.isArray(modelsList) || !modelsList.length) return;
-      let changed = false;
-      for (const m of modelsList) {
-        if (!m || !m.id) continue;
-        for (const field of ["photos", "routePhotos"]) {
-          const arr = Array.isArray(m[field]) ? m[field] : [];
-          const strictArr = [];
-          for (let i = 0; i < arr.length; i += 1) {
-            const norm = normalizePhotoEntry(arr[i], i, m.id, field);
-            if (!norm || !isUserAddedPhotoId(norm.photoId, m.id, field)) {
-              changed = true;
-              continue;
-            }
-            if (norm.src && norm.src.startsWith("data:image/") && norm.photoId) {
-              photoUrlCache.set(norm.photoId, norm.src);
-              await savePhotoDataToDb(norm.photoId, norm.src, norm.name);
-              strictArr.push({ photoId: norm.photoId, src: norm.src, name: norm.name });
-            } else if (norm.photoId) {
-              const rec = await getPhotoRecordFromDb(norm.photoId);
-              if (rec && rec.dataUrl && rec.dataUrl.startsWith("data:image/")) {
-                photoUrlCache.set(norm.photoId, rec.dataUrl);
-                strictArr.push({ photoId: norm.photoId, src: rec.dataUrl, name: norm.name });
-                changed = true;
-              }
-            }
-          }
-          m[field] = strictArr;
-        }
-      }
-      if (changed) {
+      if (idb) {
         try {
-          localStorage.setItem(STORE_KEY, JSON.stringify(buildSyncableState(state, { includePhotos: true })));
+          const tx = idb.transaction(PHOTO_STORE_NAME, "readwrite");
+          tx.objectStore(PHOTO_STORE_NAME).delete(photoId);
         } catch (e) {}
-        renderMain();
+      }
+      if (db && currentUser) {
+        try {
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(photoId));
+          await deleteDoc(mediaDocRef);
+        } catch (e) {}
       }
     }
 
@@ -1701,122 +1800,109 @@
     }
 
     async function saveVideoBlobToDb(id, blob, name, mimeType, dataUrl = "") {
+      if (!id || !blob) return false;
       const idb = await openVideoDb();
-      if (!idb || !blob) return false;
-      return new Promise((resolve) => {
+      if (idb) {
+        await new Promise((resolve) => {
+          try {
+            const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
+            tx.objectStore(VIDEO_STORE_NAME).put({
+              id,
+              blob,
+              dataUrl: dataUrl || "",
+              name: name || "video.mp4",
+              mimeType: mimeType || blob.type || "video/mp4",
+              savedAt: Date.now()
+            });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+          } catch (e) {
+            resolve(false);
+          }
+        });
+      }
+      const resolvedDataUrl = dataUrl && dataUrl.startsWith("data:video/")
+        ? dataUrl
+        : (blob.size <= 550000 ? await blobToDataUrl(blob) : "");
+      if (db && currentUser && resolvedDataUrl && resolvedDataUrl.length < 680000) {
         try {
-          const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
-          tx.objectStore(VIDEO_STORE_NAME).put({
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(id));
+          await setDoc(mediaDocRef, {
             id,
-            blob,
-            dataUrl: dataUrl || "",
+            kind: "video",
+            dataUrl: resolvedDataUrl,
             name: name || "video.mp4",
             mimeType: mimeType || blob.type || "video/mp4",
-            savedAt: Date.now()
+            updatedAt: Date.now()
           });
-          tx.oncomplete = () => resolve(true);
-          tx.onerror = () => resolve(false);
-        } catch (e) {
-          resolve(false);
+        } catch (err) {
+          console.warn("Firestore video save fallback:", err);
         }
-      });
+      }
+      return true;
     }
 
     async function getVideoRecordFromDb(id) {
+      if (!id) return null;
       const idb = await openVideoDb();
-      if (!idb || !id) return null;
-      return new Promise((resolve) => {
-        try {
-          const tx = idb.transaction(VIDEO_STORE_NAME, "readonly");
-          const req = tx.objectStore(VIDEO_STORE_NAME).get(id);
-          req.onsuccess = () => resolve(req.result || null);
-          req.onerror = () => resolve(null);
-        } catch (e) {
-          resolve(null);
+      if (idb) {
+        const localRec = await new Promise((resolve) => {
+          try {
+            const tx = idb.transaction(VIDEO_STORE_NAME, "readonly");
+            const req = tx.objectStore(VIDEO_STORE_NAME).get(id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+          } catch (e) {
+            resolve(null);
+          }
+        });
+        if (localRec && (localRec.blob instanceof Blob || localRec.dataUrl)) {
+          return localRec;
         }
-      });
+      }
+      if (db && currentUser) {
+        try {
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(id));
+          const snap = await getDoc(mediaDocRef);
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d && typeof d.dataUrl === "string" && d.dataUrl.startsWith("data:video/")) {
+              const blob = dataUrlToBlob(d.dataUrl);
+              return {
+                id,
+                blob,
+                dataUrl: d.dataUrl,
+                name: d.name || "video.mp4",
+                mimeType: d.mimeType || blob.type || "video/mp4"
+              };
+            }
+          }
+        } catch (err) {
+          console.warn("Firestore video fetch fallback:", err);
+        }
+      }
+      return null;
     }
 
     async function deleteVideoFromDb(id) {
-      const idb = await openVideoDb();
-      if (!idb || !id) return;
+      if (!id) return;
       const cachedUrl = videoUrlCache.get(id);
       if (cachedUrl && cachedUrl.startsWith("blob:")) {
         try { URL.revokeObjectURL(cachedUrl); } catch (e) {}
       }
       videoUrlCache.delete(id);
-      try {
-        const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
-        tx.objectStore(VIDEO_STORE_NAME).delete(id);
-      } catch (e) {}
-    }
-
-    async function hydrateStoredVideos(modelsList) {
-      if (!Array.isArray(modelsList) || !modelsList.length) return;
-      let changed = false;
-      for (const m of modelsList) {
-        if (!m || !m.id) continue;
-        for (const field of ["videos", "routeVideos"]) {
-          const arr = Array.isArray(m[field]) ? m[field] : [];
-          for (let i = 0; i < arr.length; i += 1) {
-            const norm = normalizeMediaItem(arr[i], `${field}_${i + 1}.mp4`, m.id, field);
-            if (!norm) continue;
-            if (typeof arr[i] === "object" && arr[i] !== null) {
-              arr[i].mediaId = norm.mediaId;
-            }
-            if (norm.mediaId) {
-              const cachedObjUrl = videoUrlCache.get(norm.mediaId);
-              if (cachedObjUrl) {
-                if (typeof arr[i] === "object" && arr[i] !== null && arr[i].src !== cachedObjUrl) {
-                  arr[i].src = cachedObjUrl;
-                  changed = true;
-                }
-                continue;
-              }
-              if (norm.src && norm.src.startsWith("data:video/")) {
-                try {
-                  const blobFromData = dataUrlToBlob(norm.src);
-                  const objUrl = URL.createObjectURL(blobFromData);
-                  videoUrlCache.set(norm.mediaId, objUrl);
-                  await saveVideoBlobToDb(norm.mediaId, blobFromData, norm.name, blobFromData.type || "video/mp4", norm.src);
-                  if (typeof arr[i] === "object" && arr[i] !== null) {
-                    arr[i].src = objUrl;
-                  } else {
-                    arr[i] = { mediaId: norm.mediaId, src: objUrl, name: norm.name };
-                  }
-                  changed = true;
-                  continue;
-                } catch (e) {}
-              }
-              const rec = await getVideoRecordFromDb(norm.mediaId);
-              if (rec && rec.blob instanceof Blob) {
-                const freshUrl = URL.createObjectURL(rec.blob);
-                videoUrlCache.set(norm.mediaId, freshUrl);
-                if (typeof arr[i] === "object" && arr[i] !== null) {
-                  arr[i].src = freshUrl;
-                } else {
-                  arr[i] = { mediaId: norm.mediaId, src: freshUrl, name: norm.name };
-                }
-                changed = true;
-              } else if (rec && typeof rec.dataUrl === "string" && rec.dataUrl.startsWith("data:video/")) {
-                try {
-                  const blobFromRec = dataUrlToBlob(rec.dataUrl);
-                  const freshUrl = URL.createObjectURL(blobFromRec);
-                  videoUrlCache.set(norm.mediaId, freshUrl);
-                  if (typeof arr[i] === "object" && arr[i] !== null) {
-                    arr[i].src = freshUrl;
-                  } else {
-                    arr[i] = { mediaId: norm.mediaId, src: freshUrl, name: norm.name };
-                  }
-                  changed = true;
-                } catch (e) {}
-              }
-            }
-          }
-        }
+      const idb = await openVideoDb();
+      if (idb) {
+        try {
+          const tx = idb.transaction(VIDEO_STORE_NAME, "readwrite");
+          tx.objectStore(VIDEO_STORE_NAME).delete(id);
+        } catch (e) {}
       }
-      if (changed) {
-        renderMain();
+      if (db && currentUser) {
+        try {
+          const mediaDocRef = doc(db, "artifacts", appId, "public", "data", "tabu_group_media", encodeURIComponent(id));
+          await deleteDoc(mediaDocRef);
+        } catch (e) {}
       }
     }
 
@@ -2888,6 +2974,7 @@
       }
       return {
         photoId: norm.photoId,
+        mediaRef: norm.photoId,
         name: norm.name || `photo_${idx + 1}.jpg`,
         src: includeImageData ? srcVal : ""
       };
@@ -2947,6 +3034,18 @@
     async function pushStateToCloud(payloadState) {
       if (!sharedDocRef || !currentUser) return;
       try {
+        // Сначала гарантируем сохранение каждого фото в отдельный документ коллекции tabu_group_media
+        if (Array.isArray(payloadState?.models)) {
+          for (const m of payloadState.models) {
+            for (const f of ["photos", "routePhotos"]) {
+              for (const p of (Array.isArray(m?.[f]) ? m[f] : [])) {
+                if (p && p.photoId && typeof p.src === "string" && p.src.startsWith("data:image/")) {
+                  await savePhotoDataToDb(p.photoId, p.src, p.name || "photo.jpg");
+                }
+              }
+            }
+          }
+        }
         let serialized = JSON.stringify(payloadState);
         if (serialized.length > 920000) {
           const compactPayload = buildSyncableState(payloadState, { includePhotos: false });
