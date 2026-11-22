@@ -2506,48 +2506,20 @@
           })}
         </div>
 
-        <div class="quick-actions-grid">
-          <button type="button" class="btn-primary" id="copyClientPitchBtn" style="padding:10px 12px; font-size:15px;">📋 Текст клиенту</button>
-          <button type="button" class="mini-btn" id="editDescInlineBtn" style="justify-content:center; padding:10px 12px; font-size:15px;">✎ Редактировать описание</button>
+        <div class="form-group">
+          <button type="button" class="btn-primary" id="saveModelMediaBtn" style="width:100%;">💾 Сохранить фото и видео</button>
         </div>
 
         <div class="detail-block">
-          <div class="detail-label">Описание для клиента</div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+            <div class="detail-label" style="margin:0;">Описание для клиента</div>
+            <button type="button" class="mini-btn" id="editDescInlineBtn">✎ Изменить</button>
+          </div>
           <div class="detail-value">${escapeHtml(clientText || "Описание не заполнено")}</div>
         </div>
 
-        ${(model.incall || model.outcall) ? `
-          <div class="detail-block">
-            <div class="detail-label">Прайс</div>
-            <div class="detail-value">${escapeHtml([
-              model.incall ? `Incall: ${model.incall}` : "",
-              model.outcall ? `Outcall: ${model.outcall}` : ""
-            ].filter(Boolean).join("\n"))}</div>
-          </div>
-        ` : ""}
-
-        ${(model.services || model.extras) ? `
-          <div class="detail-block">
-            <div class="detail-label">Услуги и допы</div>
-            <div class="detail-value">${escapeHtml([
-              model.services ? `Услуги: ${model.services}` : "",
-              model.extras ? `Допы: ${model.extras}` : ""
-            ].filter(Boolean).join("\n"))}</div>
-          </div>
-        ` : ""}
-
-        ${model.phones ? `
-          <div class="detail-block">
-            <div class="detail-label">Контакты / рабочий номер</div>
-            <div class="detail-value">${escapeHtml(model.phones)}</div>
-          </div>
-        ` : ""}
-
-        <div class="detail-block">
-          <div class="detail-label">Адрес и локация</div>
-          <div class="detail-value">${escapeHtml(model.address || "Адрес не указан")}</div>
-          ${model.district ? `<div class="card-sub" style="margin-top:6px;">Район: ${escapeHtml(model.district)}</div>` : ""}
-          ${mapUrl ? `<div class="card-sub" style="margin-top:4px; word-break:break-all;">Ссылка на адрес: ${escapeHtml(mapUrl)}</div>` : ""}
+        <div class="form-group">
+          <button type="button" class="btn-secondary" id="copyClientPitchBtn" style="width:100%; padding:10px 12px; font-size:15px;">📋 Копировать текст клиенту</button>
         </div>
 
         <div class="quick-actions-grid">
@@ -2584,23 +2556,85 @@
 
       const sheetEl = document.getElementById("sheetContent");
 
-      document.getElementById("editModelDetailBtn").addEventListener("click", () => {
+      const persistCurrentModelMediaNow = async () => {
+        const target = (state.models || []).find((m) => m.id === modelId);
+        if (!target) return false;
+        for (const field of ["photos", "routePhotos"]) {
+          const list = Array.isArray(target[field]) ? target[field] : [];
+          for (let i = 0; i < list.length; i += 1) {
+            const norm = normalizePhotoEntry(list[i], i, modelId, field);
+            const srcVal = getPhotoDisplaySrc(norm);
+            if (norm && norm.photoId && srcVal && srcVal.startsWith("data:image/")) {
+              photoUrlCache.set(norm.photoId, srcVal);
+              await savePhotoDataToDb(norm.photoId, srcVal, norm.name);
+            }
+          }
+        }
+        for (const vField of ["videos", "routeVideos"]) {
+          const vList = Array.isArray(target[vField]) ? target[vField] : [];
+          for (let i = 0; i < vList.length; i += 1) {
+            const normV = normalizeMediaItem(vList[i], `${vField}_${i + 1}.mp4`, modelId, vField);
+            if (normV && normV.mediaId) {
+              const existingRec = await getVideoRecordFromDb(normV.mediaId);
+              if (!existingRec) {
+                const candidateUrl = normV.dataUrl || normV.src || videoUrlCache.get(normV.mediaId) || "";
+                if (candidateUrl) {
+                  try {
+                    const resp = await fetch(candidateUrl);
+                    const blob = await resp.blob();
+                    if (blob && blob.size > 0) {
+                      const dataUrlToSave = candidateUrl.startsWith("data:video/")
+                        ? candidateUrl
+                        : (blob.size <= 350000 ? await blobToDataUrl(blob) : "");
+                      await saveVideoBlobToDb(normV.mediaId, blob, normV.name, blob.type || "video/mp4", dataUrlToSave);
+                      if (!videoUrlCache.has(normV.mediaId)) {
+                        videoUrlCache.set(normV.mediaId, URL.createObjectURL(blob));
+                      }
+                    }
+                  } catch (e) {}
+                }
+              }
+            }
+          }
+        }
+        lastLocalMutationAt = Date.now();
+        saveState();
+        if (sharedDocRef && currentUser) {
+          await pushStateToCloud(buildSyncableState(state, { includePhotos: true }));
+        }
+        return true;
+      };
+
+      const saveMediaBtn = document.getElementById("saveModelMediaBtn");
+      if (saveMediaBtn) {
+        saveMediaBtn.addEventListener("click", async () => {
+          saveMediaBtn.disabled = true;
+          saveMediaBtn.textContent = "Сохранение...";
+          await persistCurrentModelMediaNow();
+          saveMediaBtn.disabled = false;
+          saveMediaBtn.textContent = "💾 Сохранить фото и видео";
+          renderMain();
+          showToast("Анкета обновлена");
+        });
+      }
+
+      document.getElementById("editModelDetailBtn")?.addEventListener("click", () => {
         openEditModelSheet(modelId);
       });
 
-      document.getElementById("editDescInlineBtn").addEventListener("click", () => {
+      document.getElementById("editDescInlineBtn")?.addEventListener("click", () => {
         openEditModelSheet(modelId);
       });
 
-      document.getElementById("copyClientPitchBtn").addEventListener("click", () => {
+      document.getElementById("copyClientPitchBtn")?.addEventListener("click", () => {
         copyText(clientText);
       });
 
-      document.getElementById("copyModelAddrBtn").addEventListener("click", () => {
+      document.getElementById("copyModelAddrBtn")?.addEventListener("click", () => {
         copyText(model.address || "");
       });
 
-      document.getElementById("copyMapLinkBtn").addEventListener("click", () => {
+      document.getElementById("copyMapLinkBtn")?.addEventListener("click", () => {
         if (!mapUrl) {
           showToast("Ссылка на адрес отсутствует");
           return;
@@ -2608,7 +2642,7 @@
         copyText(mapUrl);
       });
 
-      document.getElementById("openMapLinkBtn").addEventListener("click", () => {
+      document.getElementById("openMapLinkBtn")?.addEventListener("click", () => {
         if (!mapUrl) {
           showToast("Ссылка на адрес отсутствует");
           return;
@@ -2621,23 +2655,23 @@
         photos,
         "modelPhotosUploadInput",
         `${(model.name || "model").replace(/\s+/g, "_")}_photo`,
-        (added) => {
+        async (added) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target) return;
           target.photos = [...(Array.isArray(target.photos) ? target.photos : []), ...added];
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast(`Добавлено фото: ${added.length}`);
+          showToast("Анкета обновлена");
         },
-        (idx) => {
+        async (idx) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target || !Array.isArray(target.photos)) return;
           target.photos.splice(idx, 1);
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast("Фото удалено");
+          showToast("Анкета обновлена");
         },
         modelId,
         "photos"
@@ -2648,23 +2682,23 @@
         routePhotos,
         "modelRoutePhotosUploadInput",
         `${(model.name || "model").replace(/\s+/g, "_")}_route`,
-        (added) => {
+        async (added) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target) return;
           target.routePhotos = [...(Array.isArray(target.routePhotos) ? target.routePhotos : []), ...added];
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast(`Добавлено фото проходки: ${added.length}`);
+          showToast("Анкета обновлена");
         },
-        (idx) => {
+        async (idx) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target || !Array.isArray(target.routePhotos)) return;
           target.routePhotos.splice(idx, 1);
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast("Фото проходки удалено");
+          showToast("Анкета обновлена");
         },
         modelId,
         "routePhotos"
@@ -2675,23 +2709,23 @@
         videos,
         "modelVideosUploadInput",
         `${(model.name || "model").replace(/\s+/g, "_")}_video`,
-        (added) => {
+        async (added) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target) return;
           target.videos = [...(Array.isArray(target.videos) ? target.videos : []), ...added];
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast(`Добавлено видео: ${added.length}`);
+          showToast("Анкета обновлена");
         },
-        (idx) => {
+        async (idx) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target || !Array.isArray(target.videos)) return;
           target.videos.splice(idx, 1);
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast("Видео удалено");
+          showToast("Анкета обновлена");
         },
         modelId,
         "videos"
@@ -2702,23 +2736,23 @@
         routeVideos,
         "modelRouteVideosUploadInput",
         `${(model.name || "model").replace(/\s+/g, "_")}_route_video`,
-        (added) => {
+        async (added) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target) return;
           target.routeVideos = [...(Array.isArray(target.routeVideos) ? target.routeVideos : []), ...added];
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast(`Добавлено видео проходки: ${added.length}`);
+          showToast("Анкета обновлена");
         },
-        (idx) => {
+        async (idx) => {
           const target = (state.models || []).find((m) => m.id === modelId);
           if (!target || !Array.isArray(target.routeVideos)) return;
           target.routeVideos.splice(idx, 1);
-          saveState();
+          await persistCurrentModelMediaNow();
           renderMain();
           openModelDetailSheet(modelId);
-          showToast("Видео проходки удалено");
+          showToast("Анкета обновлена");
         },
         modelId,
         "routeVideos"
