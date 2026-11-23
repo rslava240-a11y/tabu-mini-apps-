@@ -998,12 +998,97 @@
     }
 
     const STORE_KEY = "miniapp_tabu_v1";
+    const SUPABASE_URL = "https://tqrcduluwkiqapykyooj.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_pKV6cef6O4jbt-My3zV5kQ_Es4cygJE";
+    const SUPABASE_BUCKET = "models-media";
     const PHOTO_DB_NAME = "tabu_photos_db_v1";
     const PHOTO_STORE_NAME = "photos";
     const VIDEO_DB_NAME = "tabu_media_db_v1";
     const VIDEO_STORE_NAME = "videos";
     const USER_ADDED_PHOTO_PREFIX = "userph_";
     const USER_ADDED_VIDEO_PREFIX = "uservid_";
+
+    /**
+     * Проверяет, является ли строка валидной внешней ссылкой (http/https).
+     */
+    function isHttpUrl(val) {
+      return typeof val === "string" && /^https?:\/\//i.test(val.trim());
+    }
+
+    /**
+     * Формирует безопасный путь внутри бакета models-media в Supabase Storage.
+     */
+    function buildSupabaseObjectPath(modelId, fieldName, originalName, extFallback = "bin") {
+      const safeModel = String(modelId || "model").replace(/[^a-zA-Z0-9_-]/g, "_") || "model";
+      const safeField = String(fieldName || "media").replace(/[^a-zA-Z0-9_-]/g, "_") || "media";
+      const rawName = String(originalName || "").trim();
+      const dotIdx = rawName.lastIndexOf(".");
+      const rawExt = dotIdx > -1 ? rawName.slice(dotIdx + 1).toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+      const ext = rawExt || extFallback;
+      const basePart = (dotIdx > -1 ? rawName.slice(0, dotIdx) : rawName)
+        .replace(/[^a-zA-Z0-9_-]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 32) || "file";
+      const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return `${safeModel}/${safeField}/${unique}_${basePart}.${ext}`;
+    }
+
+    /**
+     * Загружает Blob или File в публичный бакет Supabase Storage и возвращает публичный URL.
+     */
+    async function uploadBlobToSupabaseStorage(blobOrFile, { modelId, fieldName, fileName, extFallback = "jpg" }) {
+      if (!blobOrFile || !SUPABASE_URL || !SUPABASE_ANON_KEY) return "";
+      const objectPath = buildSupabaseObjectPath(modelId, fieldName, fileName, extFallback);
+      const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+      const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`;
+      const contentType = blobOrFile.type || (extFallback === "mp4" ? "video/mp4" : "image/jpeg");
+
+      try {
+        const resp = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "apikey": SUPABASE_ANON_KEY,
+            "Content-Type": contentType,
+            "x-upsert": "true"
+          },
+          body: blobOrFile
+        });
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => "");
+          console.warn("Supabase Storage upload failed:", resp.status, errText);
+          return "";
+        }
+        return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`;
+      } catch (err) {
+        console.warn("Supabase Storage upload network error:", err);
+        return "";
+      }
+    }
+
+    /**
+     * Удаляет файл из Supabase Storage по публичному URL.
+     */
+    async function deleteFileFromSupabaseByUrl(fileUrl) {
+      if (!isHttpUrl(fileUrl) || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+      const prefix = `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/`;
+      if (!fileUrl.startsWith(prefix)) return;
+      const objectPath = decodeURIComponent(fileUrl.slice(prefix.length));
+      if (!objectPath) return;
+      const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+      const deleteUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`;
+      try {
+        await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "apikey": SUPABASE_ANON_KEY
+          }
+        });
+      } catch (err) {
+        console.warn("Supabase Storage delete error:", err);
+      }
+    }
 
     function isUserAddedPhotoId(photoId, modelId = "", fieldName = "") {
       const idStr = String(photoId || "").trim();
@@ -1951,9 +2036,11 @@
               const norm = normalizePhotoEntry(p, idx, modelId, fieldName);
               if (!norm || !isUserAddedPhotoId(norm.photoId, modelId, fieldName)) return;
               const srcVal = getPhotoDisplaySrc(norm);
-              if (!srcVal || !srcVal.startsWith("data:image/")) return;
+              if (!srcVal || (!srcVal.startsWith("data:image/") && !isHttpUrl(srcVal))) return;
               if (seenIds.has(norm.photoId)) return;
-              const sig = `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
+              const sig = isHttpUrl(srcVal)
+                ? `url_${srcVal}`
+                : `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
               if (seenSrcPrefix.has(sig)) return;
               seenIds.add(norm.photoId);
               seenSrcPrefix.add(sig);
@@ -2027,15 +2114,31 @@
             resolve(null);
             return;
           }
-          const finalizePhoto = async (finalDataUrl) => {
+          const finalizePhoto = async (finalDataUrl, uploadBlob = null) => {
             if (!finalDataUrl || !finalDataUrl.startsWith("data:image/")) return null;
             const uniqueToken = `${USER_ADDED_PHOTO_PREFIX}${Date.now()}_${fileIdx}_${Math.random().toString(36).slice(2, 7)}`;
             const photoId = createMediaScopeKey(modelId, fieldName, uniqueToken);
-            photoUrlCache.set(photoId, finalDataUrl);
-            await savePhotoDataToDb(photoId, finalDataUrl, file.name || `photo_${fileIdx + 1}.jpg`);
+            let blobToUpload = uploadBlob;
+            if (!blobToUpload) {
+              try { blobToUpload = dataUrlToBlob(finalDataUrl); } catch (e) { blobToUpload = null; }
+            }
+            let finalSrc = finalDataUrl;
+            if (blobToUpload) {
+              const cloudUrl = await uploadBlobToSupabaseStorage(blobToUpload, {
+                modelId,
+                fieldName,
+                fileName: file.name || `photo_${fileIdx + 1}.jpg`,
+                extFallback: "jpg"
+              });
+              if (cloudUrl) {
+                finalSrc = cloudUrl;
+              }
+            }
+            photoUrlCache.set(photoId, finalSrc);
+            await savePhotoDataToDb(photoId, finalSrc, file.name || `photo_${fileIdx + 1}.jpg`);
             return {
               photoId,
-              src: finalDataUrl,
+              src: finalSrc,
               name: file.name || `photo_${fileIdx + 1}.jpg`,
               savedAt: Date.now()
             };
@@ -2068,17 +2171,24 @@
               let w = canvas.width;
               let h = canvas.height;
               let guard = 0;
-              while (dataUrl.length > 78000 && guard < 8) {
+              while (dataUrl.length > 140000 && guard < 8) {
                 guard += 1;
-                w = Math.max(220, Math.round(w * 0.78));
-                h = Math.max(220, Math.round(h * 0.78));
-                q = Math.max(0.38, q - 0.07);
+                w = Math.max(240, Math.round(w * 0.8));
+                h = Math.max(240, Math.round(h * 0.8));
+                q = Math.max(0.42, q - 0.06);
                 canvas.width = w;
                 canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
                 dataUrl = canvas.toDataURL("image/jpeg", q);
               }
-              resolve(await finalizePhoto(dataUrl));
+              const outBlob = await new Promise((resBlob) => {
+                try {
+                  canvas.toBlob((b) => resBlob(b || null), "image/jpeg", q);
+                } catch (e) {
+                  resBlob(null);
+                }
+              });
+              resolve(await finalizePhoto(dataUrl, outBlob));
             } catch (err) {
               resolve(await finalizePhoto(rawDataUrl));
             }
@@ -2108,21 +2218,27 @@
         const file = files[i];
         const uniqueToken = `${USER_ADDED_VIDEO_PREFIX}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
         const mediaId = createMediaScopeKey(modelId, fieldName, uniqueToken);
+        const cloudUrl = await uploadBlobToSupabaseStorage(file, {
+          modelId,
+          fieldName,
+          fileName: file.name || "video.mp4",
+          extFallback: "mp4"
+        });
         let objectUrl = "";
         try {
-          objectUrl = URL.createObjectURL(file);
+          objectUrl = cloudUrl || URL.createObjectURL(file);
           if (objectUrl) {
             videoUrlCache.set(mediaId, objectUrl);
           }
         } catch (err) {
-          objectUrl = "";
+          objectUrl = cloudUrl || "";
         }
-        const videoDataUrl = file.size <= 350000 ? await blobToDataUrl(file) : "";
+        const videoDataUrl = (!cloudUrl && file.size <= 350000) ? await blobToDataUrl(file) : "";
         await saveVideoBlobToDb(mediaId, file, file.name || "video.mp4", file.type || "video/mp4", videoDataUrl);
         if (objectUrl || videoDataUrl) {
           results.push({
             mediaId,
-            src: objectUrl || videoDataUrl,
+            src: cloudUrl || objectUrl || videoDataUrl,
             dataUrl: videoDataUrl || "",
             name: file.name || "video.mp4",
             size: file.size || 0
@@ -2968,16 +3084,17 @@
       if (!norm || !isUserAddedPhotoId(norm.photoId, modelId, fieldName)) return null;
       const recFromCache = norm.photoId ? photoUrlCache.get(norm.photoId) : "";
       const srcVal = String(norm.src || recFromCache || "").trim();
-      if (!srcVal || !srcVal.startsWith("data:image/")) return null;
+      if (!srcVal || (!srcVal.startsWith("data:image/") && !isHttpUrl(srcVal))) return null;
       if (norm.photoId) {
         photoUrlCache.set(norm.photoId, srcVal);
         void savePhotoDataToDb(norm.photoId, srcVal, norm.name);
       }
+      const keepSrc = isHttpUrl(srcVal) ? srcVal : (includeImageData ? srcVal : "");
       return {
         photoId: norm.photoId,
         mediaRef: norm.photoId,
         name: norm.name || `photo_${idx + 1}.jpg`,
-        src: includeImageData ? srcVal : ""
+        src: keepSrc
       };
     }
 
@@ -3089,8 +3206,10 @@
         if (seenIds.has(photoObj.photoId)) return;
         const cached = photoUrlCache.get(photoObj.photoId) || "";
         const srcVal = String(photoObj.src || cached || "").trim();
-        if (!srcVal || !srcVal.startsWith("data:image/")) return;
-        const sig = `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
+        if (!srcVal || (!srcVal.startsWith("data:image/") && !isHttpUrl(srcVal))) return;
+        const sig = isHttpUrl(srcVal)
+          ? `url_${srcVal}`
+          : `${srcVal.length}_${srcVal.slice(0, 96)}_${srcVal.slice(-64)}`;
         if (seenSigs.has(sig)) return;
         seenIds.add(photoObj.photoId);
         seenSigs.add(sig);
